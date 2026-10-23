@@ -1,0 +1,54 @@
+name: Deploy to MERN Stack Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency: deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy via RSYNC
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts
+
+          rsync -avz --delete \
+            ./frontend/dist/ "$SERVER_USER"@"$SERVER_IP":/var/www/html/
+
+          # Backend lives outside the web root so Apache never serves its source or .env
+          rsync -avz --delete --exclude 'node_modules' --exclude '.env' \
+            ./api/ "$SERVER_USER"@"$SERVER_IP":api/
+
+      - name: Restart API
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh "$SERVER_USER"@"$SERVER_IP" \
+            'cd ~/api && npm ci --omit=dev && (pm2 restart api || pm2 start npm --name api -- start) && pm2 save'
