@@ -4,13 +4,13 @@
 
 ## Server requirements
 
-- Node 20 installed system-wide (e.g. NodeSource apt, not nvm, so non-interactive SSH finds it) and `npm install -g pm2`
-- `~/api/.env` on the server with `MONGO_URI` and `PORT` (not in the repo, never overwritten by deploys)
+- Node 24 LTS installed system-wide (e.g. NodeSource apt, not nvm, so non-interactive SSH finds it) and `npm install -g pm2`
+- `~/api/.env` on the server with `MONGO_URI`, `PORT`, and `HOST=127.0.0.1` so Express is only reachable through Apache (not in the repo, never overwritten by deploys)
 - Apache (`a2enmod proxy proxy_http`) proxying `/api` to Express, with a fallback for React Router:
 
 ```apache
-ProxyPass        /api http://localhost:5000/api
-ProxyPassReverse /api http://localhost:5000/api
+ProxyPass        /api http://127.0.0.1:5000/api
+ProxyPassReverse /api http://127.0.0.1:5000/api
 FallbackResource /index.html
 ```
 
