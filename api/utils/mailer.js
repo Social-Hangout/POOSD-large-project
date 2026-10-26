@@ -22,6 +22,11 @@ function getTransporter() {
     secure: port === 465,
     // On every other port, refuse to send credentials unless STARTTLS succeeds
     requireTLS: port !== 465,
+    // Fail fast instead of Nodemailer's multi-minute defaults, so a stuck SMTP server
+    // turns into a quick error (register returns 503) rather than a hung request
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
