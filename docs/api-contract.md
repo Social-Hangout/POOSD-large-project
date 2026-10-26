@@ -28,7 +28,7 @@ This file is the source of truth for every API route. The web app (React) and th
 
 | Rule | Value |
 | --- | --- |
-| Base path | `/api` (production: `https://<your-domain>/api`, local: `http://localhost:5000/api`) |
+| Base path | `/api` (production: `https://contactshub.site/api`, local: `http://localhost:5000/api`) |
 | Body format | JSON, with `Content-Type: application/json` |
 | Field names | camelCase (`firstName`, `matchedTerms`) |
 | Ids | strings (`"id": "6721f0c2a1b2c3d4e5f60718"`); the API returns `id`, never `_id` |
@@ -95,6 +95,7 @@ Every error has the same body:
 | 409 | Duplicate (email already registered, recipe already reviewed) |
 | 429 | Too many requests (see [Rate limits](#rate-limits)) |
 | 500 | Server bug; clients show a generic "Something went wrong" |
+| 503 | The email service failed, so nothing was saved (register only); the user can try again |
 
 Success statuses: **200** OK, **201** created, **204** deleted (no body).
 
@@ -246,6 +247,9 @@ Creates an unverified account and emails a verification link to `<APP_URL>/verif
 | 400 | `{ "error": "Password must be at least 8 characters" }` | missing or short password |
 | 409 | `{ "error": "Email already registered" }` | email already has an account |
 | 429 | `{ "error": "Too many requests. Try again later." }` | rate limit hit |
+| 503 | `{ "error": "Couldn't send the verification email. Try again later." }` | the email failed to send; the new account is deleted |
+
+If the verification email fails to send, the server deletes the account it just created and returns 503, so trying again works instead of hitting 409.
 
 The 409 tells anyone whether an email has an account, while **5. forgot-password** deliberately hides that. This is a known tradeoff: the clearer sign-up message is worth it here.
 
@@ -291,7 +295,7 @@ Sends a new verification link (valid 24 hours) and invalidates the old one. Used
 | --- | --- | --- | --- |
 | `email` | string | yes | valid email format |
 
-- **Response 200** (the same reply whether or not the account exists or is already verified):
+- **Response 200** (the same reply whether or not the account exists or is already verified, and even if the email fails to send, because a different reply would reveal which emails have accounts; the server logs send failures):
 
 ```json
 { "message": "If that account needs verifying, a new link was sent" }
@@ -355,7 +359,7 @@ Emails a reset link to `<APP_URL>/reset-password?token=<token>` (valid 1 hour, s
 | --- | --- | --- | --- |
 | `email` | string | yes | valid email format |
 
-- **Response 200** (the same reply whether or not the email has an account, so strangers cannot find out who is registered):
+- **Response 200** (the same reply whether or not the email has an account, and even if the email fails to send, so strangers cannot find out who is registered; the server logs send failures):
 
 ```json
 { "message": "If that email has an account, a reset link was sent" }
@@ -499,7 +503,7 @@ Partial-match ingredient search, done on the server. Clients call it as the user
 
 | Name | Type | Required | Rules |
 | --- | --- | --- | --- |
-| `q` | string | yes | comma-separated terms, for example `chick,rice` (URL-encode it) |
+| `q` | string | yes | comma-separated terms, for example `chick,rice` (URL-encode it); at most 200 characters |
 
 - **Response 200:** each result is a `recipe` plus `matchedTerms` and `totalTerms`, best match first.
 
@@ -539,6 +543,7 @@ No matches returns 200 with `{ "results": [], "page": 1, "totalPages": 0 }`, not
 | Status | Body | When |
 | --- | --- | --- |
 | 400 | `{ "error": "Search text is required" }` | `q` is missing or has no terms after trimming |
+| 400 | `{ "error": "Search text can be at most 200 characters" }` | `q` is too long |
 | 400 | `{ "error": "page must be a whole number, 1 or more" }` | bad `page` |
 | 400 | `{ "error": "limit must be a whole number from 1 to 50" }` | bad `limit` |
 | 401 | `{ "error": "Invalid or missing token" }` | no or bad token |
@@ -579,7 +584,7 @@ Creates a recipe owned by the caller (author comes from the token).
 | --- | --- | --- | --- |
 | `title` | string | yes | trimmed, 1 to 100 characters |
 | `ingredients` | array of `{ name, amount }` | yes | 1 to 10 items |
-| `ingredients[].name` | string | yes | trimmed, not empty, stored lowercase |
+| `ingredients[].name` | string | yes | trimmed, 1 to 50 characters, stored lowercase |
 | `ingredients[].amount` | string | no | up to 50 characters; `""` if not given |
 | `steps` | array of string | yes | 1 to 8 items, each trimmed, 1 to 500 characters |
 
@@ -590,7 +595,7 @@ Creates a recipe owned by the caller (author comes from the token).
 | --- | --- | --- |
 | 400 | `{ "error": "Title must be 1 to 100 characters" }` | missing, empty or too long title |
 | 400 | `{ "error": "A recipe needs 1 to 10 ingredients" }` | no ingredients, over 10, or not an array |
-| 400 | `{ "error": "Every ingredient needs a name" }` | an ingredient's name is missing or empty |
+| 400 | `{ "error": "Ingredient names must be 1 to 50 characters" }` | an ingredient's name is missing, empty or too long |
 | 400 | `{ "error": "Ingredient amounts can be at most 50 characters" }` | an amount is too long |
 | 400 | `{ "error": "A recipe needs 1 to 8 steps" }` | no steps, over 8, or not an array |
 | 400 | `{ "error": "Each step must be 1 to 500 characters" }` | a step is empty or too long |
@@ -781,7 +786,7 @@ Only the comment's author can delete it.
 
 Step by step:
 
-1. Read `q`, split it on commas, trim and lowercase each piece, drop empty pieces, and keep the first 10 terms.
+1. Read `q` (rejected with 400 if over 200 characters), split it on commas, trim and lowercase each piece, drop empty pieces, and keep the first 10 terms.
 2. For each term longer than 3 letters, strip one trailing `es` or `s` ("tomatoes" becomes "tomato", "eggs" becomes "egg").
 3. Escape regex special characters in each term, so input like `(` cannot crash or abuse the query.
 4. Find recipes where any term appears in an ingredient name or the title (case-insensitive contains).
@@ -806,13 +811,13 @@ Enforced in both the route validation and the Mongoose schema.
 | First and last name | required, trimmed, 1 to 50 characters each |
 | Password | at least 8 characters |
 | Recipe title | required, trimmed, 1 to 100 characters |
-| Ingredients | 1 to 10 per recipe; `name` required, lowercase, trimmed |
+| Ingredients | 1 to 10 per recipe; `name` required, lowercase, trimmed, 1 to 50 characters |
 | Ingredient amount | optional plain text, up to 50 characters |
 | Steps | 1 to 8 per recipe; each 1 to 500 characters |
 | Review rating | whole number 1 to 5 |
 | Review text | optional, up to 500 characters |
 | Comment text | required, 1 to 500 characters |
-| Search terms | first 10 terms only |
+| Search text (`q`) | at most 200 characters; first 10 terms only |
 | `page` / `limit` | `page` 1 or more; `limit` 1 to 50 |
 
 ## Notes for implementers
@@ -827,6 +832,8 @@ Enforced in both the route validation and the Mongoose schema.
 - **Email links:** the server builds links from the `APP_URL` env variable (`<APP_URL>/verify?token=...`, `<APP_URL>/reset-password?token=...`), so local testing sends `http://localhost:5173/...` and production sends the real domain. All mail goes through `sendEmail` in `api/utils/mailer.js`.
 - **Email tokens:** store verify and reset tokens hashed (SHA-256) in the database, the same idea as password hashing, so a database leak doesn't hand out working links. Compare by hashing the token from the request.
 - **Resend verification:** replaces the stored verify token and expiry, so older links stop working.
+- **Email failures:** register deletes the account it just created and returns 503 if `sendEmail` throws. Resend-verification and forgot-password catch the error, log it, and still return their normal 200.
+- **Email link pages:** `/verify` and `/reset-password` are React routes. nginx serves them through `try_files $uri $uri/ /index.html;` (see `.github/workflows/README.md`); without it, every email link opens a 404.
 
 ## OpenAPI conversion notes
 
@@ -847,7 +854,8 @@ The team still needs to decide these. Until then, build against the routes above
    - **(b)** recipes come from an outside recipe API or an AI model. Then that needs its own route, with failure cases such as 502 or 503 when the outside service is down.
 2. **Can guests browse?** Right now every recipe route needs a login.
 3. **Recipe images?** If yes, `recipe` needs an `imageUrl` field, and someone has to decide how uploads work.
-4. **Proposed additions** (not part of the contract until agreed):
+4. **Can authors review their own recipes?** The contract doesn't forbid it, which lets people inflate their own ratings. If not, **16.** needs a `403 { "error": "You can't review your own recipe" }`.
+5. **Proposed additions** (not part of the contract until agreed):
    - `averageRating` and `reviewCount` on `recipe`, so lists can show stars without calling **15.** per recipe.
    - `PUT /api/reviews/:id` (author only, same body as create), since one review per recipe means a typo can only be fixed by deleting and re-posting.
    - `missingIngredients` in search results, so the apps can show "You're missing 2 ingredients".
