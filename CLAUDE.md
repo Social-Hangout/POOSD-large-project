@@ -93,7 +93,7 @@ Every push to `main` (or a manual run) triggers `deploy.yml`:
 Server setup:
 - The deploy workflow logs in as the `deploy` user. `deploy` has **no sudo**. The API files, `~/api/.env`, and pm2 all belong to `deploy`.
 - pm2 starts on boot through the `pm2-deploy` systemd service. After changing which processes run, `deploy` runs `pm2 save`.
-- nginx config is `/etc/nginx/sites-enabled/default`, edited as root. It proxies `location /api/` to `http://127.0.0.1:5000` in both the port 80 server block and the HTTPS server block, and `location /` uses `try_files $uri $uri/ /index.html;` so React routes such as the `/verify` and `/reset-password` email links don't 404.
+- nginx config is `/etc/nginx/sites-enabled/default`, edited as root. It proxies `location /api/` to `http://127.0.0.1:5000` (forwarding `X-Forwarded-For`, which Express trusts from loopback only via `trust proxy`) in both the port 80 server block and the HTTPS server block, and `location /` uses `try_files $uri $uri/ /index.html;` so React routes such as the `/verify` and `/reset-password` email links don't 404.
 - The server's `~/api/.env` is set up by hand and never overwritten by deploys. In production it sets `HOST=127.0.0.1`, so Express is only reachable through nginx. Use `127.0.0.1`, not `localhost`, in proxy config (localhost can resolve to IPv6 `::1`).
 - The droplet also serves `contactshub.site` (our Small Project) from `/var/www/html`, with an HTTPS certificate from Certbot. Because the frontend deploy uses `--delete`, the first deploy replaces the Small Project site. Don't change the Certbot-managed lines in the nginx config.
 

@@ -10,11 +10,21 @@ DigitalOcean droplet running Ubuntu 24.04. The web server is **nginx**. Apache i
 
 - Node 24 LTS installed system-wide (NodeSource apt, not nvm, so non-interactive SSH finds it) and `npm install -g pm2`
 - pm2 starts on boot through the `pm2-deploy` systemd service. After changing which processes run, the `deploy` user runs `pm2 save` (the workflow does this on every deploy).
-- `~/api/.env` owned by `deploy`, with every variable from `api/.env.example`. It isn't in the repo and deploys never overwrite it. In production:
+- `~/api/.env` owned by `deploy` (`chmod 600`), with every variable from `api/.env.example`. It isn't in the repo and deploys never overwrite it. In production:
+  - `NODE_ENV=production`
   - `PORT=5000`
   - `HOST=127.0.0.1`, so Express is only reachable through nginx
+  - `CORS_ORIGIN=https://contactshub.site`
   - `APP_URL=https://contactshub.site`
   - `SMTP_PORT=2525`, because DigitalOcean blocks outbound SMTP on 25, 465 and 587
+- A firewall that only allows SSH, HTTP and HTTPS, so port 5000 is never reachable from outside even if `HOST` is missing from `.env`:
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw enable
+sudo ufw status    # should list only OpenSSH and Nginx Full
+```
 
 ### nginx
 
@@ -27,8 +37,14 @@ location / {
 
 location /api/ {
     proxy_pass http://127.0.0.1:5000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
 }
 ```
+
+- The `proxy_set_header` lines pass the real client IP to Express (`server.js` trusts them from `127.0.0.1` only). Without them every request looks like it came from `127.0.0.1`, so per-IP rate limits would lump all users together.
 
 - `try_files ... /index.html` lets React Router handle paths that aren't files. Without it, the `/verify` and `/reset-password` links in emails return 404. Replace the default `try_files $uri $uri/ =404;` line; don't add a second `location /`.
 - Use `127.0.0.1`, not `localhost`, because `localhost` can resolve to IPv6 `::1`, where Express isn't listening.
@@ -50,8 +66,17 @@ Settings → Secrets and variables → Actions:
 | Secret            | Value                   |
 |-------------------|-------------------------|
 | `SSH_PRIVATE_KEY` | the private key         |
+| `SSH_KNOWN_HOSTS` | the server's SSH host key, as a `known_hosts` line (see below) |
 | `SERVER_IP`       | the server's IP address |
 | `SERVER_USER`     | `deploy`                |
+
+### `SSH_KNOWN_HOSTS`
+
+The workflow refuses to deploy without it, so a server impersonating the droplet can't receive the deploy.
+
+1. On your own machine, run `ssh-keyscan -t ed25519 <SERVER_IP>` and copy the line it prints.
+2. Check it's really the droplet. Run `ssh-keygen -lf - <<< "<that line>"` locally, and `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the droplet (through the DigitalOcean web console). The two `SHA256:` fingerprints must match.
+3. Save the line as the `SSH_KNOWN_HOSTS` secret. Update it only if the droplet is rebuilt.
 
 ## Warnings
 
