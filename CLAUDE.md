@@ -46,15 +46,15 @@ Documentation deliverables (keep the code consistent with these):
 - `api/`: Express server (CommonJS, Node >= 24). `server.js` is the entry point; `routes/`, `middleware/` and `models/` (Mongoose) are where features go. `utils/` holds shared helpers (the mailer); `scripts/` holds one-off scripts run by hand.
 - `frontend/`: React 19 + TypeScript app scaffolded with Vite (ESM). Lint is oxlint.
 - `.github/workflows/deploy.yml`: the only CI. See the deploy section below.
-- API contract: `docs/api-contract.md` on branch `feature/docs-api-contract` (not merged yet) is the agreed source of truth for routes, shapes and error format. Build routes to match it, and change it in the same PR as the code. Ask before changing the contract, because the web and mobile clients both depend on it.
+- API contract: `docs/api-contract.md` is the agreed source of truth for routes, shapes and error format. Its "Open questions" section lists what the team still has to decide. Build routes to match it, and change it in the same PR as the code. Ask before changing the contract, because the web and mobile clients both depend on it.
 
 ## API conventions
 
 - All routes live under `/api`.
 - Errors always use `{ "error": "message" }`.
-- IDs are MongoDB `_id` strings.
+- IDs are MongoDB ObjectId strings, returned as `id`, never `_id`. An invalid id returns 404, not 500.
 - Users can only edit or delete their own content (recipes, reviews, comments). Enforce this in the route, not just the UI.
-- List and search routes are paginated.
+- List and search routes are paginated with `page` (default 1) and `limit` (default 20, max 50), and return `{ "<items>": [...], "page", "totalPages" }`. Bad values return 400.
 
 ## Commands
 
