@@ -108,6 +108,7 @@ Server setup details are in `.github/workflows/README.md`.
 
 - Branches are named `feature/<short-name>` (for example `feature/docs-api-contract`) and merge into `main` through PRs. Merging to `main` deploys.
 - Commit messages: `type(scope): Summary` followed by `- ` bullet lines, for example `feat(api): Add Express server skeleton`.
+- Don't add `Co-Authored-By` trailers or "Generated with Claude Code" lines to commits or PR descriptions.
 
 ## Working rules
 
