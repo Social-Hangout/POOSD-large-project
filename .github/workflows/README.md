@@ -18,14 +18,19 @@ DigitalOcean droplet running Ubuntu 24.04. The web server is **nginx**. Apache i
 
 ### nginx
 
-Config is `/etc/nginx/sites-enabled/default`, edited as root. Both the port 80 server block and the HTTPS server block proxy the API:
+Config is `/etc/nginx/sites-enabled/default`, edited as root. Both the port 80 server block and the HTTPS server block need these two locations:
 
 ```nginx
+location / {
+    try_files $uri $uri/ /index.html;
+}
+
 location /api/ {
     proxy_pass http://127.0.0.1:5000;
 }
 ```
 
+- `try_files ... /index.html` lets React Router handle paths that aren't files. Without it, the `/verify` and `/reset-password` links in emails return 404. Replace the default `try_files $uri $uri/ =404;` line; don't add a second `location /`.
 - Use `127.0.0.1`, not `localhost`, because `localhost` can resolve to IPv6 `::1`, where Express isn't listening.
 - `proxy_pass` has no trailing path, so the full `/api/...` path reaches Express unchanged.
 - The HTTPS certificate is managed by Certbot. Don't edit the Certbot-managed lines.
