@@ -17,6 +17,7 @@ DigitalOcean droplet running Ubuntu 24.04. The web server is **nginx**. Apache i
   - `CORS_ORIGIN=https://contactshub.site`
   - `APP_URL=https://contactshub.site`
   - `SMTP_PORT=2525`, because DigitalOcean blocks outbound SMTP on 25, 465 and 587
+  - `MONGO_URI`, `APP_URL` and `JWT_SECRET` (at least 32 random characters). Without them the API won't start and `/api/...` returns 502.
 - A firewall that only allows SSH, HTTP and HTTPS, so port 5000 is never reachable from outside even if `HOST` is missing from `.env`:
 
 ```bash
