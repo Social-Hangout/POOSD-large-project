@@ -8,6 +8,10 @@ on:
 
 concurrency: deploy
 
+# The job only needs to read the repo; deploying uses the SSH secrets, not GITHUB_TOKEN
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -30,18 +34,26 @@ jobs:
       - name: Deploy via RSYNC
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
+          # Pin the server's host key from a secret instead of trusting whatever answers ssh-keyscan
+          if [ -z "$SSH_KNOWN_HOSTS" ]; then
+            echo "::error::SSH_KNOWN_HOSTS secret is not set (see .github/workflows/README.md)"
+            exit 1
+          fi
+
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts
+          echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
           rsync -avz --delete \
             ./frontend/dist/ "$SERVER_USER"@"$SERVER_IP":/var/www/html/
 
-          # Backend lives outside the web root so Apache never serves its source or .env
+          # Backend lives outside the web root so nginx never serves its source or .env
           rsync -avz --delete --exclude 'node_modules' --exclude '.env' \
             ./api/ "$SERVER_USER"@"$SERVER_IP":api/
 
