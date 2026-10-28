@@ -17,6 +17,8 @@ DigitalOcean droplet running Ubuntu 24.04. The web server is **nginx**. Apache i
   - `CORS_ORIGIN=https://contactshub.site`
   - `APP_URL=https://contactshub.site`
   - `SMTP_PORT=2525`, because DigitalOcean blocks outbound SMTP on 25, 465 and 587
+  - `MONGO_URI=mongodb://recipeApp:<password>@127.0.0.1:27017/recipes?authSource=admin` (see [MongoDB](#mongodb))
+  - `MONGO_URI`, `APP_URL` and `JWT_SECRET` (at least 32 random characters) are required. Without them the API won't start and `/api/...` returns 502.
 - A firewall that only allows SSH, HTTP and HTTPS, so port 5000 is never reachable from outside even if `HOST` is missing from `.env`:
 
 ```bash
@@ -25,6 +27,32 @@ sudo ufw allow 'Nginx Full'
 sudo ufw enable
 sudo ufw status    # should list only OpenSSH and Nginx Full
 ```
+
+### MongoDB
+
+MongoDB runs on the droplet (not Atlas), so it has to be locked down by hand. As an admin:
+
+1. Check it only listens locally: `sudo ss -tlnp | grep 27017` should show `127.0.0.1:27017`, not `0.0.0.0`. If not, set `bindIp: 127.0.0.1` under `net:` in `/etc/mongod.conf`.
+2. Create an admin user and an app user that can only use the `recipes` database. Generate the app password with `openssl rand -hex 24` (hex needs no escaping in the URI):
+
+```js
+// sudo mongosh
+use admin
+db.createUser({ user: "admin", pwd: passwordPrompt(), roles: ["userAdminAnyDatabase"] })
+db.createUser({ user: "recipeApp", pwd: passwordPrompt(), roles: [{ role: "readWrite", db: "recipes" }] })
+```
+
+3. Require passwords by adding this to `/etc/mongod.conf`, then `sudo systemctl restart mongod`:
+
+```yaml
+security:
+  authorization: enabled
+```
+
+4. Start it on boot: `sudo systemctl enable mongod`.
+5. Put the app user in `~/api/.env` as `MONGO_URI` (format above). Use `127.0.0.1`, not `localhost`.
+
+Nothing backs the data up automatically. Run `mongodump` before risky changes.
 
 ### nginx
 
