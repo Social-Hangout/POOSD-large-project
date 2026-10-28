@@ -20,4 +20,17 @@ function sendVerificationEmail(to, token) {
   });
 }
 
-module.exports = { sendVerificationEmail };
+function sendPasswordResetEmail(to, token) {
+  const link = appLink('/reset-password', token);
+
+  return sendEmail({
+    to,
+    subject: 'Reset your password',
+    text: `Use this link to choose a new password:\n\n${link}\n\nThis link expires in 1 hour and works once. If you didn't ask to reset your password, you can ignore this email.`,
+    html: `<p>Use this link to choose a new password:</p>
+<p><a href="${link}">Reset my password</a></p>
+<p>This link expires in 1 hour and works once. If you didn't ask to reset your password, you can ignore this email.</p>`,
+  });
+}
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail };
