@@ -15,7 +15,7 @@ So every API feature must work for both: JWT in the `Authorization: Bearer <toke
 ## Course requirements (graded, do not substitute)
 
 Stack:
-- MERN only: MongoDB (Atlas), Express, React, Node.js. **No Python anywhere**, including scripts and tooling.
+- MERN only: MongoDB, Express, React, Node.js. The course requires a remote MongoDB, not Atlas specifically; ours is self-hosted on the droplet. **No Python anywhere**, including scripts and tooling.
 - Web frontend must use React with TypeScript. No plain HTML/CSS pages.
 - Styling: a component/utility library such as Bootstrap or Tailwind is recommended by the course.
 - Mobile app must use Flutter.
@@ -95,6 +95,7 @@ Server setup:
 - The deploy workflow logs in as the `deploy` user. `deploy` has **no sudo**. The API files, `~/api/.env`, and pm2 all belong to `deploy`.
 - pm2 starts on boot through the `pm2-deploy` systemd service. After changing which processes run, `deploy` runs `pm2 save`.
 - nginx config is `/etc/nginx/sites-enabled/default`, edited as root. It proxies `location /api/` to `http://127.0.0.1:5000` (forwarding `X-Forwarded-For`, which Express trusts from loopback only via `trust proxy`) in both the port 80 server block and the HTTPS server block, and `location /` uses `try_files $uri $uri/ /index.html;` so React routes such as the `/verify` and `/reset-password` email links don't 404.
+- MongoDB runs on the droplet itself, listening only on `127.0.0.1:27017` with authorization enabled. The API connects as a `recipeApp` user that can only read and write the `recipes` database. There are no automatic backups; run `mongodump` before risky changes.
 - The server's `~/api/.env` is set up by hand and never overwritten by deploys. In production it sets `HOST=127.0.0.1`, so Express is only reachable through nginx. Use `127.0.0.1`, not `localhost`, in proxy config (localhost can resolve to IPv6 `::1`).
 - The droplet also serves `contactshub.site` (our Small Project) from `/var/www/html`, with an HTTPS certificate from Certbot. Because the frontend deploy uses `--delete`, the first deploy replaces the Small Project site. Don't change the Certbot-managed lines in the nginx config.
 
