@@ -6,12 +6,13 @@ const User = require('../models/User');
 const { loginLimit, emailLimit } = require('../middleware/rateLimits');
 const { normalizeEmail, normalizeName, isValidPassword } = require('../utils/validate');
 const { hashToken, createEmailToken } = require('../utils/tokens');
-const { sendVerificationEmail } = require('../utils/authEmails');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/authEmails');
 
 const router = express.Router();
 
 const BCRYPT_ROUNDS = 10;
 const VERIFY_LINK_MS = 24 * 60 * 60 * 1000;
+const RESET_LINK_MS = 60 * 60 * 1000;
 
 // Login compares against this when the email has no account, so a wrong email takes as long
 // as a wrong password and response time doesn't reveal which emails are registered
@@ -138,6 +139,58 @@ router.post('/login', loginLimit, async (req, res) => {
   });
 
   res.json({ token, user: user.toPublic() });
+});
+
+// 5. Email a password reset link (verified or not)
+router.post('/forgot-password', emailLimit, async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  if (!email) {
+    return res.status(400).json({ error: 'A valid email is required' });
+  }
+
+  const { token, hash } = createEmailToken();
+  const user = await User.findOneAndUpdate(
+    { email },
+    { $set: { resetToken: hash, resetExpires: new Date(Date.now() + RESET_LINK_MS) } },
+  );
+
+  // Same as resend: not awaited, and the same reply either way
+  if (user) {
+    sendPasswordResetEmail(email, token).catch((err) => {
+      console.error('Password reset email failed:', err.message);
+    });
+  }
+
+  res.json({ message: 'If that email has an account, a reset link was sent' });
+});
+
+// 6. Set a new password using the token from the reset link
+router.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body ?? {};
+  if (typeof token !== 'string' || !EMAIL_TOKEN_PATTERN.test(token)) {
+    return res.status(400).json({ error: 'Invalid or expired link' });
+  }
+  // Checked before using the token, so a short password doesn't use up the link
+  if (!isValidPassword(newPassword)) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+  // One atomic update, so a link works once. Opening the link proves the user owns the inbox,
+  // so this also verifies the email and drops any pending verify link.
+  const user = await User.findOneAndUpdate(
+    { resetToken: hashToken(token), resetExpires: { $gt: new Date() } },
+    {
+      $set: { passwordHash, verified: true },
+      $unset: { resetToken: 1, resetExpires: 1, verifyToken: 1, verifyExpires: 1 },
+    },
+  );
+  if (!user) {
+    return res.status(400).json({ error: 'Invalid or expired link' });
+  }
+
+  res.json({ message: 'Password updated. You can log in now.' });
 });
 
 module.exports = router;
