@@ -15,7 +15,7 @@ So every API feature must work for both: JWT in the `Authorization: Bearer <toke
 ## Course requirements (graded, do not substitute)
 
 Stack:
-- MERN only: MongoDB (Atlas), Express, React, Node.js. **No Python anywhere**, including scripts and tooling.
+- MERN only: MongoDB, Express, React, Node.js. The course requires a remote MongoDB, not Atlas specifically; ours is self-hosted on the droplet. **No Python anywhere**, including scripts and tooling.
 - Web frontend must use React with TypeScript. No plain HTML/CSS pages.
 - Styling: a component/utility library such as Bootstrap or Tailwind is recommended by the course.
 - Mobile app must use Flutter.
@@ -43,7 +43,7 @@ Documentation deliverables (keep the code consistent with these):
 
 ## Layout
 
-- `api/`: Express server (CommonJS, Node >= 24). `server.js` is the entry point; `routes/`, `middleware/` and `models/` (Mongoose) are where features go. `utils/` holds shared helpers (the mailer); `scripts/` holds one-off scripts run by hand.
+- `api/`: Express server (CommonJS, Node >= 24). `server.js` is the entry point; `routes/`, `middleware/` and `models/` (Mongoose) are where features go. Protected routes use `middleware/requireAuth.js`, which sets `req.userId` from the token; `middleware/rateLimits.js` holds the contract's rate limits. `utils/` holds shared helpers (the mailer); `scripts/` holds one-off scripts run by hand.
 - `frontend/`: React 19 + TypeScript app scaffolded with Vite (ESM). Lint is oxlint.
 - `.github/workflows/deploy.yml`: the only CI. See the deploy section below.
 - API contract: `docs/api-contract.md` is the agreed source of truth for routes, shapes and error format. Its "Open questions" section lists what the team still has to decide. Build routes to match it, and change it in the same PR as the code. Ask before changing the contract, because the web and mobile clients both depend on it.
@@ -80,6 +80,7 @@ There is no test framework yet in either package.
 - **Port 5000 on macOS** is taken by AirPlay Receiver (responses come from `Server: AirTunes`, not Express). Set `PORT=5001` in `api/.env` and run the frontend with `API_URL=http://localhost:5001 npm run dev`.
 - The frontend calls relative `/api/...` URLs. In dev, Vite proxies `/api` to `API_URL` (default `http://localhost:5000`, see `frontend/vite.config.ts`). In production, nginx does the proxying.
 - `HOST` defaults to `0.0.0.0` so a phone on the same network can reach the API at `http://<LAN IP>:<PORT>/api/health`.
+- The API refuses to start unless `MONGO_URI`, `APP_URL` and `JWT_SECRET` (at least 32 characters) are set, and exits if it can't reach MongoDB.
 - Environment variables are listed in `api/.env.example` (names only). `.env` files are gitignored. Never commit secrets or hardcode them; when adding a variable, add its name to `.env.example`.
 
 ## Deployment
@@ -94,6 +95,7 @@ Server setup:
 - The deploy workflow logs in as the `deploy` user. `deploy` has **no sudo**. The API files, `~/api/.env`, and pm2 all belong to `deploy`.
 - pm2 starts on boot through the `pm2-deploy` systemd service. After changing which processes run, `deploy` runs `pm2 save`.
 - nginx config is `/etc/nginx/sites-enabled/default`, edited as root. It proxies `location /api/` to `http://127.0.0.1:5000` (forwarding `X-Forwarded-For`, which Express trusts from loopback only via `trust proxy`) in both the port 80 server block and the HTTPS server block, and `location /` uses `try_files $uri $uri/ /index.html;` so React routes such as the `/verify` and `/reset-password` email links don't 404.
+- MongoDB runs on the droplet itself, listening only on `127.0.0.1:27017` with authorization enabled. The API connects as a `recipeApp` user that can only read and write the `recipes` database. There are no automatic backups; run `mongodump` before risky changes.
 - The server's `~/api/.env` is set up by hand and never overwritten by deploys. In production it sets `HOST=127.0.0.1`, so Express is only reachable through nginx. Use `127.0.0.1`, not `localhost`, in proxy config (localhost can resolve to IPv6 `::1`).
 - The droplet also serves `contactshub.site` (our Small Project) from `/var/www/html`, with an HTTPS certificate from Certbot. Because the frontend deploy uses `--delete`, the first deploy replaces the Small Project site. Don't change the Certbot-managed lines in the nginx config.
 
