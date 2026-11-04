@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const mongoose = require('mongoose');
 
 const authRoutes = require('./routes/auth');
@@ -31,6 +32,9 @@ const corsOrigin = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
   : '*';
 
+// Safe default security headers (nosniff, HSTS, no framing by other sites, and more) on every response.
+// The API only returns JSON, so helmet's strict default Content-Security-Policy costs nothing.
+app.use(helmet());
 app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 
