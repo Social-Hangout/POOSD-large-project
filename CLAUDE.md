@@ -44,7 +44,8 @@ Documentation deliverables (keep the code consistent with these):
 ## Layout
 
 - `api/`: Express server (CommonJS, Node >= 24). `server.js` is the entry point; `routes/`, `middleware/` and `models/` (Mongoose) are where features go. Protected routes use `middleware/requireAuth.js`, which sets `req.userId` from the token; `middleware/rateLimits.js` holds the contract's rate limits. `utils/` holds shared helpers (the mailer); `scripts/` holds one-off scripts run by hand.
-- `frontend/`: React 19 + TypeScript app scaffolded with Vite (ESM). Lint is oxlint.
+- `web/`: the React 19 + TypeScript web app (Vite, Tailwind, React Router). This is what deploys.
+- `frontend/`: the original Vite starter, no longer deployed.
 - `.github/workflows/deploy.yml`: the only CI. See the deploy section below.
 - API contract: `docs/api-contract.md` is the agreed source of truth for routes, shapes and error format. Its "Open questions" section lists what the team still has to decide. Build routes to match it, and change it in the same PR as the code. Ask before changing the contract, because the web and mobile clients both depend on it.
 
@@ -64,11 +65,10 @@ cd api && npm install
 npm run dev        # nodemon
 npm start          # node server.js (what pm2 runs in production)
 
-# Frontend
-cd frontend && npm install
+# Web app
+cd web && npm install
 npm run dev        # Vite dev server on :5173
-npm run build      # tsc -b && vite build -> frontend/dist
-npm run lint       # oxlint
+npm run build      # tsc --noEmit && vite build -> web/dist
 ```
 
 Health check: `curl http://localhost:<PORT>/api/health` returns `{"status":"ok"}`.
@@ -77,8 +77,8 @@ There is no test framework yet in either package.
 
 ## Local development gotchas
 
-- **Port 5000 on macOS** is taken by AirPlay Receiver (responses come from `Server: AirTunes`, not Express). Set `PORT=5001` in `api/.env` and run the frontend with `API_URL=http://localhost:5001 npm run dev`.
-- The frontend calls relative `/api/...` URLs. In dev, Vite proxies `/api` to `API_URL` (default `http://localhost:5000`, see `frontend/vite.config.ts`). In production, nginx does the proxying.
+- **Port 5000 on macOS** is taken by AirPlay Receiver (responses come from `Server: AirTunes`, not Express). Set `PORT=5001` in `api/.env` and set `API_TARGET=http://localhost:5001` in `web/.env`.
+- The frontend calls relative `/api/...` URLs. In dev, Vite proxies `/api` to `API_TARGET` from `web/.env` (default `http://localhost:5000`, see `web/vite.config.ts`). In production, nginx does the proxying.
 - `HOST` defaults to `0.0.0.0` so a phone on the same network can reach the API at `http://<LAN IP>:<PORT>/api/health`.
 - The API refuses to start unless `MONGO_URI`, `APP_URL` and `JWT_SECRET` (at least 32 characters) are set, and exits if it can't reach MongoDB.
 - Environment variables are listed in `api/.env.example` (names only). `.env` files are gitignored. Never commit secrets or hardcode them; when adding a variable, add its name to `.env.example`.
@@ -88,7 +88,7 @@ There is no test framework yet in either package.
 Server: DigitalOcean droplet, Ubuntu 24.04. The web server is **nginx, not Apache**. Apache is installed but disabled; ignore any Apache instructions or config.
 
 Every push to `main` (or a manual run) triggers `deploy.yml`:
-1. Builds `frontend/` with Node 24 and rsyncs `frontend/dist/` to `/var/www/html/` with `--delete`.
+1. Builds `web/` with Node 24 and rsyncs `web/dist/` to `/var/www/html/` with `--delete`.
 2. Rsyncs `api/` to `~/api` on the server (skipping `node_modules` and `.env`), then runs `npm ci --omit=dev` and restarts it with pm2 under the name `api`.
 
 Server setup:
