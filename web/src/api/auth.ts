@@ -33,5 +33,6 @@ export const forgotPassword = (email: string) =>
 export const resetPassword = (token: string, password: string) =>
   api<{ message?: string }>("/auth/reset-password", {
     method: "POST",
-    body: JSON.stringify({ token, password }),
+    // The API reads the new password from `newPassword` (docs/api-contract.md, route 6)
+    body: JSON.stringify({ token, newPassword: password }),
   });
