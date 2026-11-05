@@ -1,0 +1,257 @@
+openapi: 3.0.3
+info:
+  title: Recipe App API
+  version: 0.1.0
+  description: |
+    Login and ingredient search for the recipe app (COP 4331C Large Project).
+    Converted from `docs/api-contract.md`, which stays the source of truth.
+
+    **Try it out:** call `POST /auth/login` with a verified account, copy `token` from the
+    response, click **Authorize**, and paste it. Then try `GET /recipes/search`.
+    Login is limited to 5 attempts per 15 minutes per email + IP.
+servers:
+  - url: https://contactshub.site/api
+    description: Production
+  - url: http://localhost:5000/api
+    description: Local (use 5001 on macOS, see CLAUDE.md)
+
+tags:
+  - name: Accounts
+  - name: Recipes and search
+
+paths:
+  /auth/login:
+    post:
+      tags: [Accounts]
+      summary: Log in
+      description: |
+        Returns a JWT (valid 24 hours) and the public user. A 401 here means a wrong email or
+        password, not an expired session.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  description: Compared lowercase
+                  example: ana@test.com
+                password:
+                  type: string
+                  example: Passw0rd!
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, user]
+                properties:
+                  token:
+                    type: string
+                    description: 'Send as `Authorization: Bearer <token>`'
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: A field is missing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: Email and password are required }
+        '401':
+          description: Wrong email or wrong password (same message for both)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: Invalid credentials }
+        '403':
+          description: Right password, but the email is not verified yet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: Please verify your email first }
+        '429':
+          description: Rate limit hit (5 attempts per 15 minutes per email + IP)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: Too many login attempts. Try again later. }
+
+  /recipes/search:
+    get:
+      tags: [Recipes and search]
+      summary: Search recipes by ingredients
+      description: |
+        Splits `q` on commas, trims and lowercases each term, drops empty ones, keeps the first 10,
+        and strips one trailing `es` or `s` from terms longer than 3 letters. Each term is a
+        case-insensitive "contains" match against ingredient names and the title. Results are
+        sorted by `matchedTerms` (high to low), then title (A to Z). Clients never re-sort.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Comma-separated terms, at most 200 characters
+          schema:
+            type: string
+            maxLength: 200
+          example: chick,rice
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: |
+            Matching recipes, best match first. No matches is 200 with an empty list, and a page
+            past the end is 200 with an empty list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results, page, totalPages]
+                properties:
+                  results:
+                    type: array
+                    items: { $ref: '#/components/schemas/SearchResult' }
+                  page:
+                    type: integer
+                    example: 1
+                  totalPages:
+                    type: integer
+                    example: 1
+        '400':
+          description: Bad `q`, `page` or `limit`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                missing:
+                  summary: q missing or only commas/spaces
+                  value: { error: Search text is required }
+                tooLong:
+                  summary: q over 200 characters
+                  value: { error: Search text can be at most 200 characters }
+                page:
+                  summary: Bad page
+                  value: { error: 'page must be a whole number, 1 or more' }
+                limit:
+                  summary: Bad limit
+                  value: { error: limit must be a whole number from 1 to 50 }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    page:
+      name: page
+      in: query
+      required: false
+      description: Whole number, 1 or more. Bad values return 400, not clamped.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    limit:
+      name: limit
+      in: query
+      required: false
+      description: Whole number, 1 to 50. Bad values return 400, not clamped.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+
+  responses:
+    Unauthorized:
+      description: No token, or an invalid or expired token. Clients delete the token and go to login.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: Invalid or missing token }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Human-readable; clients show it as is
+
+    User:
+      type: object
+      required: [id, firstName, lastName, email]
+      properties:
+        id: { type: string, example: 6721f0c2a1b2c3d4e5f60718 }
+        firstName: { type: string, example: Ana }
+        lastName: { type: string, example: Diaz }
+        email: { type: string, example: ana@test.com }
+
+    Author:
+      type: object
+      required: [id, firstName]
+      properties:
+        id: { type: string, example: 6721f0c2a1b2c3d4e5f60718 }
+        firstName: { type: string, example: Ana }
+
+    Ingredient:
+      type: object
+      required: [name, amount]
+      properties:
+        name:
+          type: string
+          description: Lowercase
+          example: chicken
+        amount:
+          type: string
+          description: Plain text; "" when not given
+          example: 1 cup
+
+    Recipe:
+      type: object
+      required: [id, title, ingredients, steps, author, createdAt]
+      properties:
+        id: { type: string, example: 6721f3aa9b8c7d6e5f403199 }
+        title: { type: string, example: Chicken Fried Rice }
+        ingredients:
+          type: array
+          items: { $ref: '#/components/schemas/Ingredient' }
+        steps:
+          type: array
+          items: { type: string }
+          example: [Cook the rice., Fry the chicken and rice together.]
+        author:
+          $ref: '#/components/schemas/Author'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-10-26T15:04:14.195Z'
+
+    SearchResult:
+      allOf:
+        - $ref: '#/components/schemas/Recipe'
+        - type: object
+          required: [matchedTerms, totalTerms]
+          properties:
+            matchedTerms:
+              type: integer
+              description: How many search terms this recipe matched
+              example: 2
+            totalTerms:
+              type: integer
+              description: How many terms were searched
+              example: 2

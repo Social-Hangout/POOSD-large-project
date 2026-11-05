@@ -7,6 +7,8 @@ const mongoose = require('mongoose');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const recipeRoutes = require('./routes/recipes');
+const { reviews: reviewRoutes } = require('./routes/reviews');
+const { comments: commentRoutes } = require('./routes/comments');
 
 // Refuse to start without the settings auth depends on, instead of failing on the first request.
 // A short JWT_SECRET can be guessed offline from any token, which would let anyone forge logins.
@@ -39,6 +41,8 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/recipes', recipeRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/comments', commentRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
