@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { verify } from "../api/auth";
 import MealDbCredit from "../components/MealDbCredit";
@@ -8,7 +8,12 @@ type State = "loading" | "success" | "error";
 export default function VerifyPage() {
   const [params] = useSearchParams();
   const [state, setState] = useState<State>("loading");
+  // A verify link works only once. StrictMode runs effects twice in development, and the
+  // second request would get 400 and replace the success message, so send it only once.
+  const sent = useRef(false);
   useEffect(() => {
+    if (sent.current) return;
+    sent.current = true;
     const token = params.get("token");
     if (!token) {
       setState("error");
