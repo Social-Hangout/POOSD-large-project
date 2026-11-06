@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import AuthPage from "./pages/AuthPage";
+import HomePage from "./pages/HomePage";
 import RecipeDetailPage from "./pages/RecipeDetailPage";
 import RecipesPage from "./pages/RecipesPage";
 import VerifyPage from "./pages/VerifyPage";
@@ -21,6 +22,14 @@ export default function App() {
           <Route path="/reset-password" element={<AuthPage mode="reset" />} />
           <Route path="/resend-verification" element={<AuthPage mode="resend" />} />
           <Route path="/verify" element={<VerifyPage />} />
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/recipes"
             element={
