@@ -1,6 +1,6 @@
 # Deployment
 
-`deploy.yml` runs on every push to `main`, or manually from the Actions tab (Run workflow). It builds the React frontend and rsyncs `frontend/dist/` to `/var/www/html/`, then rsyncs `api/` to `~/api` (the deploy user's home) and restarts the Express server with pm2.
+`deploy.yml` runs on every push to `main`, or manually from the Actions tab (Run workflow). It builds the React frontend and rsyncs `web/dist/` to `/var/www/html/`, then rsyncs `api/` to `~/api` (the deploy user's home) and restarts the Express server with pm2.
 
 ## Server
 

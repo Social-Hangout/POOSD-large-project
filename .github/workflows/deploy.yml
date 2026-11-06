@@ -26,7 +26,7 @@ jobs:
           node-version: 24
 
       - name: Build Frontend
-        working-directory: ./frontend
+        working-directory: ./web
         run: |
           npm ci
           npm run build
@@ -51,7 +51,7 @@ jobs:
           chmod 644 ~/.ssh/known_hosts
 
           rsync -avz --delete \
-            ./frontend/dist/ "$SERVER_USER"@"$SERVER_IP":/var/www/html/
+            ./web/dist/ "$SERVER_USER"@"$SERVER_IP":/var/www/html/
 
           # Backend lives outside the web root so nginx never serves its source or .env
           rsync -avz --delete --exclude 'node_modules' --exclude '.env' \
