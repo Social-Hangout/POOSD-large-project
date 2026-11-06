@@ -1,0 +1,37 @@
+name: savory_app
+description: Savory recipe app (POOSD Large Project, mobile client).
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # State management (course/team decision).
+  flutter_riverpod: ^2.6.1
+  # Navigation (course/team decision).
+  go_router: ^14.8.1
+  # HTTP client (course/team decision).
+  dio: ^5.8.0
+  # The contract says clients save the JWT; secure storage keeps it out of plain prefs.
+  flutter_secure_storage: ^9.2.4
+  # The Figma icons are SVGs; this renders them without redrawing them.
+  flutter_svg: ^2.0.17
+  # Figma uses DM Sans and Playfair Display.
+  google_fonts: ^6.2.1
+  # Opens the TheMealDB link from the attribution credit.
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
+    - assets/images/
+    - assets/images/recipes/
