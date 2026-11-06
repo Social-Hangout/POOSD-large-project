@@ -36,3 +36,9 @@ export const resetPassword = (token: string, password: string) =>
     // The API reads the new password from `newPassword` (docs/api-contract.md, route 6)
     body: JSON.stringify({ token, newPassword: password }),
   });
+
+export const resendVerification = (email: string) =>
+  api<{ message: string }>("/auth/resend-verification", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });

@@ -1,11 +1,12 @@
 import { FormEvent, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import * as authApi from "../api/auth";
+import { ApiError, errorMessage } from "../api/client";
 import AuthShell from "../components/AuthShell";
 import { FormField, StatusMessage } from "../components/FormControls";
 import { useAuth } from "../context/AuthContext";
 
-type Mode = "login" | "register" | "forgot" | "reset";
+type Mode = "login" | "register" | "forgot" | "reset" | "resend";
 
 const content = {
   login: {
@@ -25,6 +26,12 @@ const content = {
     kicker: "BACK TO GOOD THINGS",
     title: "Forgot your password?",
     copy: "It happens. Enter the email you use for Savory and we'll send you a link to reset it.",
+  },
+  resend: {
+    step: "03 / Verify your email",
+    kicker: "ALMOST THERE",
+    title: "Need a new link?",
+    copy: "Enter the email you signed up with and we'll send a fresh verification link.",
   },
   reset: {
     step: "09 / Choose a new password",
@@ -48,6 +55,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
         {mode === "register" && <RegisterForm />}
         {mode === "forgot" && <ForgotForm />}
         {mode === "reset" && <ResetForm />}
+        {mode === "resend" && <ResendForm />}
       </div>
     </AuthShell>
   );
@@ -59,19 +67,27 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [unverified, setUnverified] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError("");
+    setUnverified(false);
     setLoading(true);
     try {
       const response = await authApi.login({ email, password });
       auth.login(response.token, response.user);
       navigate("/recipes");
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Unable to log in.";
-      setError(/verif/i.test(message) ? "Please verify your email before logging in." : message);
+      // 403 means the password was right but the email isn't verified yet
+      const notVerified = caught instanceof ApiError && caught.status === 403;
+      setUnverified(notVerified);
+      setError(
+        notVerified
+          ? "Please verify your email before logging in."
+          : errorMessage(caught, "Unable to log in."),
+      );
     } finally {
       setLoading(false);
     }
@@ -102,6 +118,7 @@ function LoginForm() {
           Forgot password?
         </Link>
         {error && <StatusMessage error>{error}</StatusMessage>}
+        {unverified && <ResendButton email={email} />}
         <button className="primary-button" disabled={loading}>
           {loading ? "Logging in…" : "Log In"}
         </button>
@@ -123,6 +140,8 @@ function RegisterForm() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
   const errors = useMemo(
     () => ({
@@ -145,13 +164,16 @@ function RegisterForm() {
     event.preventDefault();
     setSubmitted(true);
     setStatus("");
+    setError("");
     if (Object.values(errors).some(Boolean)) return;
     setLoading(true);
     try {
-      const response = await authApi.register(fields);
-      setStatus(response.message || "Check your email to verify your account.");
+      const { confirm: _confirm, ...body } = fields;
+      await authApi.register(body);
+      setDone(true);
+      setStatus(`We sent a verification link to ${fields.email}. Open it to activate your account.`);
     } catch (caught) {
-      setStatus(caught instanceof Error ? caught.message : "Unable to register.");
+      setError(errorMessage(caught, "Unable to register."));
     } finally {
       setLoading(false);
     }
@@ -228,10 +250,15 @@ function RegisterForm() {
           onChange={set("confirm")}
           error={submitted ? errors.confirm : ""}
         />
+        {error && <StatusMessage error>{error}</StatusMessage>}
         {status && <StatusMessage>{status}</StatusMessage>}
-        <button className="primary-button" disabled={loading}>
-          {loading ? "Creating…" : "Create Account"}
-        </button>
+        {done ? (
+          <ResendButton email={fields.email} />
+        ) : (
+          <button className="primary-button" disabled={loading}>
+            {loading ? "Creating…" : "Create Account"}
+          </button>
+        )}
       </form>
       <p className="legal-copy">
         By creating an account, you agree to our <a href="#terms">Terms of use</a> and{" "}
@@ -247,15 +274,18 @@ function RegisterForm() {
 function ForgotForm() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   async function submit(event: FormEvent) {
     event.preventDefault();
+    setStatus("");
+    setError("");
     setLoading(true);
     try {
       const response = await authApi.forgotPassword(email);
       setStatus(response.message);
     } catch (caught) {
-      setStatus(caught instanceof Error ? caught.message : "Unable to send the link.");
+      setError(errorMessage(caught, "Unable to send the link."));
     } finally {
       setLoading(false);
     }
@@ -270,7 +300,9 @@ function ForgotForm() {
           placeholder="you@email.com"
           value={email}
           onChange={setEmail}
+          autoComplete="email"
         />
+        {error && <StatusMessage error>{error}</StatusMessage>}
         {status && <StatusMessage>{status}</StatusMessage>}
         <button className="primary-button" disabled={loading}>
           {loading ? "Sending…" : "Send Reset Link"}
@@ -290,6 +322,7 @@ function ResetForm() {
   const [confirm, setConfirm] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const valid = /^(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -297,12 +330,25 @@ function ResetForm() {
     if (!token) return setError("This reset link is invalid or expired.");
     if (!valid) return setError("Use at least 8 characters, a number and a symbol.");
     if (password !== confirm) return setError("Passwords don't match.");
+    setLoading(true);
     try {
       const response = await authApi.resetPassword(token, password);
       setStatus(response.message || "Password reset. You can now log in.");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to reset password.");
+      setError(errorMessage(caught, "Unable to reset password."));
+    } finally {
+      setLoading(false);
     }
+  }
+  if (status) {
+    return (
+      <>
+        <StatusMessage>{status}</StatusMessage>
+        <Link className="primary-button" to="/">
+          Go to login
+        </Link>
+      </>
+    );
   }
   return (
     <>
@@ -338,7 +384,84 @@ function ResetForm() {
         )}
         {error && <StatusMessage error>{error}</StatusMessage>}
         {status && <StatusMessage>{status}</StatusMessage>}
-        <button className="primary-button">Reset Password</button>
+        <button className="primary-button" disabled={loading}>
+          {loading ? "Saving…" : "Reset Password"}
+        </button>
+      </form>
+      <Link className="back-link" to="/">
+        ← &nbsp;Back to login
+      </Link>
+    </>
+  );
+}
+
+// Sends POST /auth/resend-verification for the given email
+function ResendButton({ email }: { email: string }) {
+  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [error, setError] = useState("");
+  async function resend() {
+    setError("");
+    setState("sending");
+    try {
+      await authApi.resendVerification(email);
+      setState("sent");
+    } catch (caught) {
+      setError(errorMessage(caught, "Unable to resend the link."));
+      setState("idle");
+    }
+  }
+  return (
+    <>
+      {error && <StatusMessage error>{error}</StatusMessage>}
+      {state === "sent" && <StatusMessage>A new verification link is on its way.</StatusMessage>}
+      <button
+        type="button"
+        className="secondary-button"
+        onClick={resend}
+        disabled={state === "sending" || !email}
+      >
+        {state === "sending" ? "Sending…" : "Resend verification email"}
+      </button>
+    </>
+  );
+}
+
+function ResendForm() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setStatus("");
+    setError("");
+    setLoading(true);
+    try {
+      const response = await authApi.resendVerification(email);
+      setStatus(response.message);
+    } catch (caught) {
+      setError(errorMessage(caught, "Unable to resend the link."));
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <>
+      <form className="auth-form" onSubmit={submit}>
+        <FormField
+          label="Email"
+          name="email"
+          type="email"
+          placeholder="you@email.com"
+          value={email}
+          onChange={setEmail}
+          autoComplete="email"
+        />
+        {error && <StatusMessage error>{error}</StatusMessage>}
+        {status && <StatusMessage>{status}</StatusMessage>}
+        <button className="primary-button" disabled={loading}>
+          {loading ? "Sending…" : "Send Verification Link"}
+        </button>
       </form>
       <Link className="back-link" to="/">
         ← &nbsp;Back to login

@@ -19,6 +19,7 @@ export default function App() {
           <Route path="/register" element={<AuthPage mode="register" />} />
           <Route path="/forgot-password" element={<AuthPage mode="forgot" />} />
           <Route path="/reset-password" element={<AuthPage mode="reset" />} />
+          <Route path="/resend-verification" element={<AuthPage mode="resend" />} />
           <Route path="/verify" element={<VerifyPage />} />
           <Route
             path="/recipes"

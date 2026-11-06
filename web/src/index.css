@@ -1088,3 +1088,19 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* "Resend verification email" button on the login and register forms */
+.secondary-button {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 11px;
+  border: 1.5px solid var(--green);
+  background: white;
+  color: var(--dark-green);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font:
+    600 14px "DM Sans",
+    sans-serif;
+}

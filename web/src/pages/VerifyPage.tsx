@@ -39,6 +39,14 @@ export default function VerifyPage() {
               : "This link is invalid or expired"}
         </h1>
         {state === "success" && <p>You can now log in</p>}
+        {state === "error" && (
+          <p>
+            Links expire after 24 hours and work once.{" "}
+            <Link className="back-link" to="/resend-verification">
+              Send a new link
+            </Link>
+          </p>
+        )}
         {state !== "loading" && (
           <Link className="primary-button link-button" to="/">
             Back to login
