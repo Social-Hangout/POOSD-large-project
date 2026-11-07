@@ -2,8 +2,13 @@ const express = require('express');
 const mongoose = require('mongoose');
 
 const Recipe = require('../models/Recipe');
+const Review = require('../models/Review');
+const Comment = require('../models/Comment');
 const User = require('../models/User');
 const requireAuth = require('../middleware/requireAuth');
+const { parsePagination } = require('../utils/pagination');
+const { recipeReviews } = require('./reviews');
+const { recipeComments } = require('./comments');
 
 const router = express.Router();
 
@@ -19,34 +24,19 @@ const LIMITS = {
   step: 500,
 };
 
-const WHOLE_NUMBER = /^\d+$/;
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 50;
+// Search limits (docs/api-contract.md, "Search rule")
+const MAX_SEARCH_LENGTH = 200;
+const MAX_SEARCH_TERMS = 10;
 
 const RECIPE_NOT_FOUND = { error: 'Recipe not found' };
 const NOT_YOUR_RECIPE = { error: 'Not your recipe' };
 
-// Every recipe route needs a login
+// Every recipe route needs a login, including the nested reviews and comments below
 router.use(requireAuth);
 
-// Reads ?page and ?limit. Returns { page, limit }, or { error } with the contract's message.
-// Bad values are rejected, not clamped. A repeated param (?page=1&page=2) arrives as an
-// array, so it fails the string check.
-function parsePagination(query) {
-  const { page = '1', limit = String(DEFAULT_LIMIT) } = query ?? {};
-
-  const pageNumber = Number(page);
-  if (typeof page !== 'string' || !WHOLE_NUMBER.test(page) || !Number.isSafeInteger(pageNumber) || pageNumber < 1) {
-    return { error: 'page must be a whole number, 1 or more' };
-  }
-
-  const limitNumber = Number(limit);
-  if (typeof limit !== 'string' || !WHOLE_NUMBER.test(limit) || limitNumber < 1 || limitNumber > MAX_LIMIT) {
-    return { error: 'limit must be a whole number from 1 to 50' };
-  }
-
-  return { page: pageNumber, limit: limitNumber };
-}
+// 15-16 and 18-19 live in their own files but sit under /api/recipes/:id/...
+router.use('/:id/reviews', recipeReviews);
+router.use('/:id/comments', recipeComments);
 
 // Returns the trimmed string, or null unless it's a string of min to max characters.
 // Rejecting non-strings means a JSON object such as { "$gt": "" } can never reach a query.
@@ -112,6 +102,57 @@ function toPublicRecipe(recipe) {
   };
 }
 
+// Turns ?q into search terms, following the contract's search rule steps 1-2.
+// Returns { terms }, or { error } with the contract's message.
+function parseSearchTerms(q) {
+  if (typeof q !== 'string') return { error: 'Search text is required' };
+  if (q.length > MAX_SEARCH_LENGTH) return { error: 'Search text can be at most 200 characters' };
+
+  const terms = [];
+  for (const piece of q.split(',')) {
+    let term = piece.trim().toLowerCase();
+    if (!term) continue;
+
+    // "tomatoes" -> "tomato", "eggs" -> "egg"; short words like "gas" are left alone
+    if (term.length > 3) {
+      if (term.endsWith('es')) term = term.slice(0, -2);
+      else if (term.endsWith('s')) term = term.slice(0, -1);
+    }
+
+    // "egg, eggs" is one term, so it can't count as two matches
+    if (!terms.includes(term)) terms.push(term);
+    if (terms.length === MAX_SEARCH_TERMS) break;
+  }
+
+  return terms.length ? { terms } : { error: 'Search text is required' };
+}
+
+// Escapes regex special characters, so input like "(" is searched for literally instead of
+// crashing the query or being used to build a slow pattern
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Aggregation expression: true if the pattern appears in the recipe's title or any ingredient name
+function termMatches(pattern) {
+  return {
+    $or: [
+      { $regexMatch: { input: '$title', regex: pattern, options: 'i' } },
+      {
+        $anyElementTrue: [
+          {
+            $map: {
+              input: { $ifNull: ['$ingredients', []] },
+              as: 'ingredient',
+              in: { $regexMatch: { input: '$$ingredient.name', regex: pattern, options: 'i' } },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
 // Loads the recipe in :id, or null if the id isn't a valid ObjectId (so it 404s instead of 500ing)
 function findRecipe(id) {
   if (!mongoose.isObjectIdOrHexString(id)) return null;
@@ -120,7 +161,7 @@ function findRecipe(id) {
 
 // 9. List recipes, newest first. ?mine=true returns only the caller's.
 router.get('/', async (req, res) => {
-  const { page, limit, error } = parsePagination(req.query);
+  const { page, limit, skip, error } = parsePagination(req.query);
   if (error) return res.status(400).json({ error });
 
   const { mine = 'false' } = req.query;
@@ -138,12 +179,58 @@ router.get('/', async (req, res) => {
     recipes = await Recipe.find(filter)
       // _id breaks ties between recipes created in the same millisecond, so pages never overlap
       .sort({ createdAt: -1, _id: -1 })
-      .skip((page - 1) * limit)
+      .skip(skip)
       .limit(limit)
       .populate('author', 'firstName');
   }
 
   res.json({ recipes: recipes.map(toPublicRecipe), page, totalPages });
+});
+
+// 10. Partial-match ingredient search, best match first (docs/api-contract.md, "Search rule").
+// Declared before GET /:id, or Express would treat "search" as a recipe id.
+router.get('/search', async (req, res) => {
+  const { terms, error: searchError } = parseSearchTerms(req.query.q);
+  if (searchError) return res.status(400).json({ error: searchError });
+
+  const { page, limit, skip, error } = parsePagination(req.query);
+  if (error) return res.status(400).json({ error });
+
+  const patterns = terms.map(escapeRegex);
+
+  const [{ results, total }] = await Recipe.aggregate([
+    // Step 4: recipes where any term is in the title or an ingredient name
+    {
+      $match: {
+        $or: patterns.flatMap((pattern) => [
+          { title: { $regex: pattern, $options: 'i' } },
+          { 'ingredients.name': { $regex: pattern, $options: 'i' } },
+        ]),
+      },
+    },
+    // Step 5: count how many of the terms each recipe matched
+    { $addFields: { matchedTerms: { $add: patterns.map((pattern) => ({ $cond: [termMatches(pattern), 1, 0] })) } } },
+    // Step 6: best match first, then title A to Z (_id keeps pages stable when titles tie)
+    { $sort: { matchedTerms: -1, title: 1, _id: 1 } },
+    { $facet: { results: [{ $skip: skip }, { $limit: limit }], total: [{ $count: 'count' }] } },
+  ])
+    // Case-insensitive title sort, so "apple pie" doesn't land after "Zucchini"
+    .collation({ locale: 'en', strength: 2 });
+
+  // aggregate returns plain objects; turn them back into documents to reuse populate and toPublicRecipe
+  const recipes = results.map((raw) => Recipe.hydrate(raw));
+  await Recipe.populate(recipes, { path: 'author', select: 'firstName' });
+
+  const count = total[0]?.count ?? 0;
+  res.json({
+    results: recipes.map((recipe, i) => ({
+      ...toPublicRecipe(recipe),
+      matchedTerms: results[i].matchedTerms,
+      totalTerms: terms.length,
+    })),
+    page,
+    totalPages: Math.ceil(count / limit),
+  });
 });
 
 // 11. One recipe
@@ -191,8 +278,10 @@ router.delete('/:id', async (req, res) => {
   if (!recipe) return res.status(404).json(RECIPE_NOT_FOUND);
   if (!recipe.author.equals(req.userId)) return res.status(403).json(NOT_YOUR_RECIPE);
 
-  // TODO(API2): once DB1's Review and Comment models land, delete this recipe's reviews and
-  // comments here (deleteMany) before the recipe, as the contract's cascade delete requires
+  // Cascade delete. Children go first: if the server dies halfway, the worst case is a recipe
+  // missing some reviews, never reviews pointing at a recipe that's gone. (A real all-or-nothing
+  // delete needs a transaction, which our single-server MongoDB doesn't support.)
+  await Promise.all([Review.deleteMany({ recipe: recipe._id }), Comment.deleteMany({ recipe: recipe._id })]);
   await recipe.deleteOne();
 
   res.status(204).end();
