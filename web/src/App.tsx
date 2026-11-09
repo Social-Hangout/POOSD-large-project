@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import AuthPage from "./pages/AuthPage";
-import HomePage from "./pages/HomePage";
 import MyRecipesPage from "./pages/MyRecipesPage";
 import ProfilePage from "./pages/ProfilePage";
 import RecipeDetailPage from "./pages/RecipeDetailPage";
@@ -18,7 +17,6 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 }
 
 const protectedPages: [string, ReactNode][] = [
-  ["/home", <HomePage />],
   ["/recipes", <RecipesPage />],
   ["/recipes/new", <RecipeFormPage />],
   ["/recipes/:id", <RecipeDetailPage />],
@@ -42,6 +40,8 @@ export default function App() {
           {protectedPages.map(([path, page]) => (
             <Route key={path} path={path} element={<ProtectedRoute>{page}</ProtectedRoute>} />
           ))}
+          {/* The old placeholder home page now goes to the recipe list */}
+          <Route path="/home" element={<Navigate to="/recipes" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

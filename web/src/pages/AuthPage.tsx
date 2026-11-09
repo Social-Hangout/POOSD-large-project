@@ -78,7 +78,7 @@ function LoginForm() {
     try {
       const response = await authApi.login({ email, password });
       auth.login(response.token, response.user);
-      navigate("/home");
+      navigate("/recipes");
     } catch (caught) {
       // 403 means the password was right but the email isn't verified yet
       const notVerified = caught instanceof ApiError && caught.status === 403;
