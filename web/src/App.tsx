@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import AuthPage from "./pages/AuthPage";
 import HomePage from "./pages/HomePage";
 import RecipeDetailPage from "./pages/RecipeDetailPage";
+import RecipeFormPage from "./pages/RecipeFormPage";
 import RecipesPage from "./pages/RecipesPage";
 import SearchPage from "./pages/SearchPage";
 import VerifyPage from "./pages/VerifyPage";
@@ -17,7 +18,9 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 const protectedPages: [string, ReactNode][] = [
   ["/home", <HomePage />],
   ["/recipes", <RecipesPage />],
+  ["/recipes/new", <RecipeFormPage />],
   ["/recipes/:id", <RecipeDetailPage />],
+  ["/recipes/:id/edit", <RecipeFormPage />],
   ["/search", <SearchPage />],
 ];
 
