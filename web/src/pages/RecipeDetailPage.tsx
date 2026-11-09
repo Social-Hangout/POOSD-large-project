@@ -4,6 +4,7 @@ import { errorMessage } from "../api/client";
 import { getRecipe } from "../api/recipes";
 import AppShell from "../components/AppShell";
 import { authorName } from "../components/RecipeCard";
+import ReviewsSection from "../components/ReviewsSection";
 import { useAuth } from "../context/AuthContext";
 import type { Recipe } from "../types";
 import { OwnerActions } from "./MyRecipesPage";
@@ -73,8 +74,7 @@ export default function RecipeDetailPage() {
                 </ol>
               </section>
             </div>
-            {/* Reviews and comments go here */}
-            <section id="reviews-section"></section>
+            <ReviewsSection recipeId={recipe.id} />
           </>
         )}
       </article>
