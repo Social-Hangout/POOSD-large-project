@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { errorMessage } from "../api/client";
 import { getRecipe } from "../api/recipes";
 import AppShell from "../components/AppShell";
 import { authorName } from "../components/RecipeCard";
+import { useAuth } from "../context/AuthContext";
 import type { Recipe } from "../types";
+import { OwnerActions } from "./MyRecipesPage";
 
 export default function RecipeDetailPage() {
   const { id = "" } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [error, setError] = useState("");
 
@@ -22,6 +26,8 @@ export default function RecipeDetailPage() {
       active = false;
     };
   }, [id]);
+
+  const isMine = Boolean(recipe && user && recipe.author?.id === user.id);
 
   return (
     <AppShell>
@@ -38,6 +44,11 @@ export default function RecipeDetailPage() {
             <p className="eyebrow">SAVORY RECIPE</p>
             <h1>{recipe.title}</h1>
             <p className="byline">By {authorName(recipe)}</p>
+            {isMine && (
+              <div className="card-actions detail-actions">
+                <OwnerActions recipe={recipe} onDeleted={() => navigate("/my-recipes")} />
+              </div>
+            )}
             <div className="detail-columns">
               <section>
                 <h2>Ingredients</h2>

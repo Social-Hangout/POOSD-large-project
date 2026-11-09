@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import AuthPage from "./pages/AuthPage";
 import HomePage from "./pages/HomePage";
+import MyRecipesPage from "./pages/MyRecipesPage";
 import RecipeDetailPage from "./pages/RecipeDetailPage";
 import RecipeFormPage from "./pages/RecipeFormPage";
 import RecipesPage from "./pages/RecipesPage";
@@ -22,6 +23,7 @@ const protectedPages: [string, ReactNode][] = [
   ["/recipes/:id", <RecipeDetailPage />],
   ["/recipes/:id/edit", <RecipeFormPage />],
   ["/search", <SearchPage />],
+  ["/my-recipes", <MyRecipesPage />],
 ];
 
 export default function App() {
