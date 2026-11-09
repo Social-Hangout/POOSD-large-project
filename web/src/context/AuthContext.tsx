@@ -7,6 +7,8 @@ interface AuthContextValue {
   user: User | null;
   login: (token: string, user: User) => void;
   logout: () => void;
+  // Saves a changed user (after editing the profile) so the whole app shows the new name
+  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -31,6 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(nextUser);
   }, []);
 
+  const updateUser = useCallback((nextUser: User) => {
+    localStorage.setItem("user", JSON.stringify(nextUser));
+    setUser(nextUser);
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -39,7 +46,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     navigate("/");
   }, [navigate]);
 
-  const value = useMemo(() => ({ token, user, login, logout }), [login, logout, token, user]);
+  const value = useMemo(
+    () => ({ token, user, login, logout, updateUser }),
+    [login, logout, token, updateUser, user],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

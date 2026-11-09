@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import AuthPage from "./pages/AuthPage";
 import HomePage from "./pages/HomePage";
 import MyRecipesPage from "./pages/MyRecipesPage";
+import ProfilePage from "./pages/ProfilePage";
 import RecipeDetailPage from "./pages/RecipeDetailPage";
 import RecipeFormPage from "./pages/RecipeFormPage";
 import RecipesPage from "./pages/RecipesPage";
@@ -24,6 +25,7 @@ const protectedPages: [string, ReactNode][] = [
   ["/recipes/:id/edit", <RecipeFormPage />],
   ["/search", <SearchPage />],
   ["/my-recipes", <MyRecipesPage />],
+  ["/profile", <ProfilePage />],
 ];
 
 export default function App() {
