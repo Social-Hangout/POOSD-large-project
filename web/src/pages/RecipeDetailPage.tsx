@@ -1,31 +1,30 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { errorMessage } from "../api/client";
 import { getRecipe } from "../api/recipes";
-import MealDbCredit from "../components/MealDbCredit";
-import { useAuth } from "../context/AuthContext";
+import AppShell from "../components/AppShell";
+import { authorName } from "../components/RecipeCard";
 import type { Recipe } from "../types";
 
 export default function RecipeDetailPage() {
   const { id = "" } = useParams();
-  const { logout } = useAuth();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [error, setError] = useState("");
+
   useEffect(() => {
+    let active = true;
     setRecipe(null);
     setError("");
     getRecipe(id)
-      .then(setRecipe)
-      .catch((caught) => setError(caught.message));
+      .then((found) => active && setRecipe(found))
+      .catch((caught) => active && setError(errorMessage(caught, "Could not load this recipe.")));
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   return (
-    <main className="detail-page">
-      <header>
-        <Link className="brand" to="/recipes">
-          Savory<span>.</span>
-        </Link>
-        <button onClick={logout}>Log out</button>
-      </header>
+    <AppShell>
       <article className="detail-card">
         <Link className="back-link detail-back" to="/recipes">
           ← &nbsp;Back to recipes
@@ -38,7 +37,7 @@ export default function RecipeDetailPage() {
           <>
             <p className="eyebrow">SAVORY RECIPE</p>
             <h1>{recipe.title}</h1>
-            <p className="byline">By {recipe.author?.firstName || "a Savory cook"}</p>
+            <p className="byline">By {authorName(recipe)}</p>
             <div className="detail-columns">
               <section>
                 <h2>Ingredients</h2>
@@ -63,13 +62,11 @@ export default function RecipeDetailPage() {
                 </ol>
               </section>
             </div>
+            {/* Reviews and comments go here */}
             <section id="reviews-section"></section>
           </>
         )}
       </article>
-      <footer className="page-footer">
-        <MealDbCredit />
-      </footer>
-    </main>
+    </AppShell>
   );
 }
