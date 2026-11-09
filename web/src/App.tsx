@@ -5,6 +5,7 @@ import AuthPage from "./pages/AuthPage";
 import HomePage from "./pages/HomePage";
 import RecipeDetailPage from "./pages/RecipeDetailPage";
 import RecipesPage from "./pages/RecipesPage";
+import SearchPage from "./pages/SearchPage";
 import VerifyPage from "./pages/VerifyPage";
 
 // Pages that need a login send everyone else to the landing page
@@ -17,6 +18,7 @@ const protectedPages: [string, ReactNode][] = [
   ["/home", <HomePage />],
   ["/recipes", <RecipesPage />],
   ["/recipes/:id", <RecipeDetailPage />],
+  ["/search", <SearchPage />],
 ];
 
 export default function App() {
