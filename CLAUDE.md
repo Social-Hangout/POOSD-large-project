@@ -46,7 +46,7 @@ Documentation deliverables (keep the code consistent with these):
 - `api/`: Express server (CommonJS, Node >= 24). `server.js` is the entry point and `app.js` builds the Express app; `routes/`, `middleware/` and `models/` (Mongoose) are where features go. Protected routes use `middleware/requireAuth.js`, which sets `req.userId` from the token; `middleware/rateLimits.js` holds the contract's rate limits. `utils/` holds shared helpers (the mailer); `scripts/` holds one-off scripts run by hand.
 - `web/`: the React 19 + TypeScript web app (Vite, Tailwind, React Router). This is what deploys.
 - `frontend/`: the original Vite starter, no longer deployed.
-- `.github/workflows/deploy.yml`: the only CI. See the deploy section below.
+- `.github/workflows/deploy.yml`: deploys on every push to `main` (see the deploy section below). `.github/workflows/tests.yml`: runs the API tests on every PR and push to `main`.
 - API contract: `docs/api-contract.md` is the agreed source of truth for routes, shapes and error format. Its "Open questions" section lists what the team still has to decide. Build routes to match it, and change it in the same PR as the code. Ask before changing the contract, because the web and mobile clients both depend on it.
 
 ## API conventions
