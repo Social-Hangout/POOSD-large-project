@@ -1,0 +1,80 @@
+@startuml use-case
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor Guest
+actor "Verified User" as User
+actor "Email Service\n(Brevo)" as Mail <<system>>
+
+rectangle "Recipe App" {
+  package Account {
+    usecase "Register" as UC_Reg
+    usecase "Verify Email" as UC_Ver
+    usecase "Resend Verification\nEmail" as UC_Resend
+    usecase "Log In" as UC_Login
+    usecase "Request Password\nReset" as UC_Forgot
+    usecase "Reset Password" as UC_Reset
+    usecase "Send Verification\nEmail" as UC_SendVer
+    usecase "Send Reset Email" as UC_SendReset
+  }
+  package Profile {
+    usecase "View Profile" as UC_Me
+    usecase "Edit Profile" as UC_EditMe
+    usecase "Log Out" as UC_Logout
+  }
+  package Recipes {
+    usecase "Search Recipes\nby Ingredients" as UC_Search
+    usecase "Browse Recipes" as UC_Browse
+    usecase "View My Recipes" as UC_Mine
+    usecase "View Recipe Details" as UC_View
+    usecase "Create Recipe" as UC_Create
+    usecase "Edit Own Recipe" as UC_Edit
+    usecase "Delete Own Recipe" as UC_Del
+  }
+  package "Reviews & Comments" {
+    usecase "Read Reviews" as UC_ReadRev
+    usecase "Write Review" as UC_WriteRev
+    usecase "Delete Own Review" as UC_DelRev
+    usecase "Read Comments" as UC_ReadCom
+    usecase "Post Comment" as UC_PostCom
+    usecase "Delete Own Comment" as UC_DelCom
+  }
+}
+
+Guest --> UC_Reg
+Guest --> UC_Ver
+Guest --> UC_Resend
+Guest --> UC_Login
+Guest --> UC_Forgot
+Guest --> UC_Reset
+
+UC_Reg ..> UC_SendVer : <<include>>
+UC_Resend ..> UC_SendVer : <<include>>
+UC_Forgot ..> UC_SendReset : <<include>>
+UC_SendVer --> Mail
+UC_SendReset --> Mail
+
+User --> UC_Me
+User --> UC_EditMe
+User --> UC_Logout
+User --> UC_Search
+User --> UC_Browse
+User --> UC_View
+User --> UC_Create
+User --> UC_Edit
+User --> UC_Del
+User --> UC_DelRev
+User --> UC_DelCom
+
+UC_Mine ..> UC_Browse : <<extend>>
+UC_ReadRev ..> UC_View : <<extend>>
+UC_WriteRev ..> UC_View : <<extend>>
+UC_ReadCom ..> UC_View : <<extend>>
+UC_PostCom ..> UC_View : <<extend>>
+
+note bottom of UC_Edit
+  Only the author can edit or
+  delete a recipe, review or comment.
+end note
+@enduml
