@@ -64,6 +64,9 @@ export default function AuthPage({ mode }: { mode: Mode }) {
 function LoginForm() {
   const navigate = useNavigate();
   const auth = useAuth();
+  // Set by api/client.ts when a saved login has expired
+  const [params] = useSearchParams();
+  const expired = params.get("expired") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -117,6 +120,7 @@ function LoginForm() {
         <Link className="forgot-link" to="/forgot-password">
           Forgot password?
         </Link>
+        {expired && !error && <StatusMessage>Your session expired. Please log in again.</StatusMessage>}
         {error && <StatusMessage error>{error}</StatusMessage>}
         {unverified && <ResendButton email={email} />}
         <button className="primary-button" disabled={loading}>
