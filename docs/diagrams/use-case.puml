@@ -1,9 +1,9 @@
 @startuml use-case
-left to right direction
+top to bottom direction
 skinparam packageStyle rectangle
 skinparam actorStyle awesome
 
-actor Guest
+actor "Prospective User\n(not logged in)" as Guest
 actor "Verified User" as User
 actor "Email Service\n(Brevo)" as Mail <<system>>
 
@@ -73,8 +73,13 @@ UC_WriteRev ..> UC_View : <<extend>>
 UC_ReadCom ..> UC_View : <<extend>>
 UC_PostCom ..> UC_View : <<extend>>
 
-note bottom of UC_Edit
-  Only the author can edit or
-  delete a recipe, review or comment.
-end note
+' layout hints
+UC_Reg -[hidden]down-> UC_Login
+UC_Ver -[hidden]down-> UC_Forgot
+UC_Resend -[hidden]down-> UC_Reset
+UC_Me -[hidden]down-> UC_EditMe
+UC_EditMe -[hidden]down-> UC_Logout
+UC_ReadRev -[hidden]down-> UC_ReadCom
+UC_WriteRev -[hidden]down-> UC_PostCom
+UC_DelRev -[hidden]down-> UC_DelCom
 @enduml
