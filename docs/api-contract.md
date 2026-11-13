@@ -257,6 +257,8 @@ The 409 tells anyone whether an email has an account, while **5. forgot-password
 
 Called by the web page at `/verify?token=...`. Phone users open the link in their phone's browser, then log in to the app.
 
+The link can be opened more than once until it expires, and each time returns 200. Email scanners such as Microsoft Safe Links (used by UCF mail) open links before the user does, so a one-time link would already be used when the user clicks it. Sending a new link (**3.**) or resetting the password (**6.**) makes the old link stop working.
+
 - **Auth:** none
 - **Request:**
 
@@ -278,7 +280,7 @@ Called by the web page at `/verify?token=...`. Phone users open the link in thei
 
 | Status | Body | When |
 | --- | --- | --- |
-| 400 | `{ "error": "Invalid or expired link" }` | token missing, wrong, already used, replaced by a newer one, or older than 24 hours |
+| 400 | `{ "error": "Invalid or expired link" }` | token missing, wrong, replaced by a newer one, cleared by a password reset, or older than 24 hours |
 
 ### 3. `POST /api/auth/resend-verification`
 

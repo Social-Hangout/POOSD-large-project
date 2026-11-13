@@ -3,11 +3,12 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const MINUTE = 60 * 1000;
 
 // Counts live in memory, which is fine for the single pm2 process; they reset when the API restarts
-function limiter({ windowMs, limit, message, key }) {
+function limiter({ windowMs, limit, message, key, skipSuccessfulRequests = false }) {
   return rateLimit({
     windowMs,
     limit,
     keyGenerator: key,
+    skipSuccessfulRequests,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     message: { error: message },
@@ -26,18 +27,23 @@ const byIp = (req) => ipKeyGenerator(req.ip);
 const TOO_MANY_LOGINS = 'Too many login attempts. Try again later.';
 const TOO_MANY_REQUESTS = 'Too many requests. Try again later.';
 
-// 5 login attempts per 15 minutes per email + IP
+// 5 failed login attempts per 15 minutes per email + IP. Successful logins (status < 400) don't
+// count, so someone signing in on both the web and the phone app isn't locked out.
 const loginLimit = limiter({
   windowMs: 15 * MINUTE,
   limit: 5,
   message: TOO_MANY_LOGINS,
   key: (req) => `${byIp(req)}|${bodyEmail(req)}`,
+  skipSuccessfulRequests: true,
 });
 
-// Routes that send email: 3 per hour per email and 20 per hour per IP, to protect the daily email quota
-const emailLimit = [
-  limiter({ windowMs: 60 * MINUTE, limit: 20, message: TOO_MANY_REQUESTS, key: byIp }),
-  limiter({ windowMs: 60 * MINUTE, limit: 3, message: TOO_MANY_REQUESTS, key: bodyEmail }),
-];
+// Routes that send email: 3 per hour per email and 20 per hour per IP, to protect the daily email quota.
+// Each route gets its own counters, so using up resend-verification doesn't block forgot-password.
+function emailLimit() {
+  return [
+    limiter({ windowMs: 60 * MINUTE, limit: 20, message: TOO_MANY_REQUESTS, key: byIp }),
+    limiter({ windowMs: 60 * MINUTE, limit: 3, message: TOO_MANY_REQUESTS, key: bodyEmail }),
+  ];
+}
 
 module.exports = { loginLimit, emailLimit };
