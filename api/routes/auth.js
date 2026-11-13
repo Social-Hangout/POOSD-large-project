@@ -79,10 +79,14 @@ router.post('/verify', async (req, res) => {
     return res.status(400).json({ error: 'Invalid or expired link' });
   }
 
-  // One atomic update, so a link can't be used twice
+  // The token is kept until it expires, so opening the link again still says verified. Email
+  // scanners such as Microsoft Safe Links (UCF mail) open links before the user does, and
+  // the page verifies on load, so a one-time link would already be used when the user clicks.
+  // Reusing it is harmless: it can only mark this account verified. Resend replaces it and
+  // reset-password clears it, so older links still stop working.
   const user = await User.findOneAndUpdate(
     { verifyToken: hashToken(token), verifyExpires: { $gt: new Date() } },
-    { $set: { verified: true }, $unset: { verifyToken: 1, verifyExpires: 1 } },
+    { $set: { verified: true } },
   );
   if (!user) {
     return res.status(400).json({ error: 'Invalid or expired link' });
