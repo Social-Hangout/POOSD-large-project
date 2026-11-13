@@ -22,7 +22,7 @@ const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', BCRYPT_ROUNDS);
 const EMAIL_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 
 // 1. Create an unverified account and email a verification link
-router.post('/register', emailLimit, async (req, res) => {
+router.post('/register', emailLimit(), async (req, res) => {
   const body = req.body ?? {};
   const firstName = normalizeName(body.firstName);
   const lastName = normalizeName(body.lastName);
@@ -92,7 +92,7 @@ router.post('/verify', async (req, res) => {
 });
 
 // 3. Send a new verification link, replacing the old one
-router.post('/resend-verification', emailLimit, async (req, res) => {
+router.post('/resend-verification', emailLimit(), async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   if (!email) {
     return res.status(400).json({ error: 'A valid email is required' });
@@ -142,7 +142,7 @@ router.post('/login', loginLimit, async (req, res) => {
 });
 
 // 5. Email a password reset link (verified or not)
-router.post('/forgot-password', emailLimit, async (req, res) => {
+router.post('/forgot-password', emailLimit(), async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   if (!email) {
     return res.status(400).json({ error: 'A valid email is required' });

@@ -34,10 +34,13 @@ const loginLimit = limiter({
   key: (req) => `${byIp(req)}|${bodyEmail(req)}`,
 });
 
-// Routes that send email: 3 per hour per email and 20 per hour per IP, to protect the daily email quota
-const emailLimit = [
-  limiter({ windowMs: 60 * MINUTE, limit: 20, message: TOO_MANY_REQUESTS, key: byIp }),
-  limiter({ windowMs: 60 * MINUTE, limit: 3, message: TOO_MANY_REQUESTS, key: bodyEmail }),
-];
+// Routes that send email: 3 per hour per email and 20 per hour per IP, to protect the daily email quota.
+// Each route gets its own counters, so using up resend-verification doesn't block forgot-password.
+function emailLimit() {
+  return [
+    limiter({ windowMs: 60 * MINUTE, limit: 20, message: TOO_MANY_REQUESTS, key: byIp }),
+    limiter({ windowMs: 60 * MINUTE, limit: 3, message: TOO_MANY_REQUESTS, key: bodyEmail }),
+  ];
+}
 
 module.exports = { loginLimit, emailLimit };
