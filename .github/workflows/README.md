@@ -1,6 +1,8 @@
 # Deployment
 
-`deploy.yml` runs on every push to `main`, or manually from the Actions tab (Run workflow). It builds the React frontend and rsyncs `frontend/dist/` to `/var/www/html/`, then rsyncs `api/` to `~/api` (the deploy user's home) and restarts the Express server with pm2.
+`deploy.yml` runs on every push to `main`, or manually from the Actions tab (Run workflow). It builds the React frontend and rsyncs `web/dist/` to `/var/www/html/`, then rsyncs `api/` to `~/api` (the deploy user's home) and restarts the Express server with pm2.
+
+`tests.yml` runs the API tests (`cd api && npm test`) on every pull request and every push to `main`. It needs no secrets or server access: each test file gets its own temporary in-memory MongoDB. On its own it only reports a result; it doesn't block anything. To stop a PR with failing tests from being merged (and deployed), a repo admin adds a branch protection rule on `main` (Settings > Branches) that requires the **API Tests / api-tests** check.
 
 ## Server
 
