@@ -1,13 +1,14 @@
 openapi: 3.0.3
 info:
   title: Recipe App API
-  version: 0.1.0
+  version: 1.0.0
   description: |
     Login and ingredient search for the recipe app (COP 4331C Large Project).
     Converted from `docs/api-contract.md`, which stays the source of truth.
 
     **Try it out:** call `POST /auth/login` with a verified account, copy `token` from the
-    response, click **Authorize**, and paste it. Then try `GET /recipes/search`.
+    response (without the quotes), click **Authorize**, and paste it. Paste only the token:
+    the word `Bearer` is added for you. Then try `GET /recipes/search` with `q` set to `chick,rice`.
     Login is limited to 5 attempts per 15 minutes per email + IP.
 servers:
   - url: https://contactshub.site/api

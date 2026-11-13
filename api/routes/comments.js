@@ -76,7 +76,7 @@ const comments = express.Router();
 comments.delete('/:id', requireAuth, async (req, res) => {
   const comment = mongoose.isObjectIdOrHexString(req.params.id) ? await Comment.findById(req.params.id) : null;
   if (!comment) return res.status(404).json(COMMENT_NOT_FOUND);
-  if (!comment.author.equals(req.userId)) return res.status(403).json({ error: 'Not your comment' });
+  if (!comment.author?.equals(req.userId)) return res.status(403).json({ error: 'Not your comment' });
 
   await comment.deleteOne();
 
