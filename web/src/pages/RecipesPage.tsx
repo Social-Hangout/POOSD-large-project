@@ -27,7 +27,7 @@ export default function RecipesPage() {
     };
   }, [page, reload]);
 
-  const featured = data?.results[0];
+  const featured = data?.recipes[0];
 
   return (
     <main className="dashboard-page">
@@ -102,11 +102,11 @@ export default function RecipesPage() {
             </div>
           ) : !data ? (
             <div className="loading-grid">Finding something delicious…</div>
-          ) : data.results.length === 0 ? (
+          ) : data.recipes.length === 0 ? (
             <div className="loading-grid">No recipes yet</div>
           ) : (
             <div className="recipe-grid">
-              {data.results.map((recipe) => (
+              {data.recipes.map((recipe) => (
                 <RecipeCard key={recipe.id} recipe={recipe} />
               ))}
             </div>
