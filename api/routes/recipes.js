@@ -257,10 +257,11 @@ router.post('/', async (req, res) => {
 });
 
 // 13. Replace a recipe's title, ingredients and steps. Author only.
+// A recipe with no author (such as one imported from TheMealDB) belongs to no one, so it's 403 for everyone.
 router.put('/:id', async (req, res) => {
   const recipe = await findRecipe(req.params.id);
   if (!recipe) return res.status(404).json(RECIPE_NOT_FOUND);
-  if (!recipe.author.equals(req.userId)) return res.status(403).json(NOT_YOUR_RECIPE);
+  if (!recipe.author?.equals(req.userId)) return res.status(403).json(NOT_YOUR_RECIPE);
 
   const { recipe: fields, error } = parseRecipe(req.body);
   if (error) return res.status(400).json({ error });
@@ -276,7 +277,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const recipe = await findRecipe(req.params.id);
   if (!recipe) return res.status(404).json(RECIPE_NOT_FOUND);
-  if (!recipe.author.equals(req.userId)) return res.status(403).json(NOT_YOUR_RECIPE);
+  if (!recipe.author?.equals(req.userId)) return res.status(403).json(NOT_YOUR_RECIPE);
 
   // Cascade delete. Children go first: if the server dies halfway, the worst case is a recipe
   // missing some reviews, never reviews pointing at a recipe that's gone. (A real all-or-nothing

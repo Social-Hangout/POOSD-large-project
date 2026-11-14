@@ -97,7 +97,7 @@ const reviews = express.Router();
 reviews.delete('/:id', requireAuth, async (req, res) => {
   const review = mongoose.isObjectIdOrHexString(req.params.id) ? await Review.findById(req.params.id) : null;
   if (!review) return res.status(404).json(REVIEW_NOT_FOUND);
-  if (!review.author.equals(req.userId)) return res.status(403).json({ error: 'Not your review' });
+  if (!review.author?.equals(req.userId)) return res.status(403).json({ error: 'Not your review' });
 
   await review.deleteOne();
 
