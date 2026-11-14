@@ -72,7 +72,7 @@ recipeReviews.post('/', async (req, res) => {
   const duplicate = { error: 'You already reviewed this recipe' };
 
   // This check gives the right answer on its own, but two requests at the same moment can both
-  // pass it. The contract's unique index on recipe + author (DB1's model) closes that gap:
+  // pass it. The unique index on recipe + author in models/Review.js closes that gap:
   // the second insert then fails with code 11000, which is also mapped to 409 below.
   if (await Review.exists({ recipe: req.params.id, author: req.userId })) {
     return res.status(409).json(duplicate);
@@ -97,7 +97,7 @@ const reviews = express.Router();
 reviews.delete('/:id', requireAuth, async (req, res) => {
   const review = mongoose.isObjectIdOrHexString(req.params.id) ? await Review.findById(req.params.id) : null;
   if (!review) return res.status(404).json(REVIEW_NOT_FOUND);
-  if (!review.author.equals(req.userId)) return res.status(403).json({ error: 'Not your review' });
+  if (!review.author?.equals(req.userId)) return res.status(403).json({ error: 'Not your review' });
 
   await review.deleteOne();
 

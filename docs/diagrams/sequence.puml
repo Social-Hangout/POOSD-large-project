@@ -1,0 +1,74 @@
+@startuml sequence
+' Two pages (newpage), so each one is wide enough for a slide
+skinparam sequenceMessageAlign center
+hide footbox
+autonumber
+
+actor "User" as U
+participant "Client\n(React web / Flutter)" as C
+participant "Express API" as API
+database "MongoDB" as DB
+participant "Brevo SMTP\n(Nodemailer)" as Mail
+
+title Sign up and verify email (1 of 2)
+
+== Register ==
+U -> C : enter name, email, password
+C -> API : POST /api/auth/register { firstName, lastName, email, password }
+API -> API : validate, bcrypt hash password, create verify token (24 h)
+API -> DB : create User { verified: false, verifyToken: hash(token) }
+alt email already registered
+  DB --> API : duplicate key
+  API --> C : 409 { error }
+else created
+  API -> Mail : send verification email (link: APP_URL/verify?token=...)
+  alt email fails
+    API -> DB : delete the new user
+    API --> C : 503 { error }
+  else sent
+    API --> C : 201 { message }
+    Mail -->> U : "Verify your email"
+  end
+end
+
+== Verify email ==
+U -> C : open /verify?token=...
+C -> API : POST /api/auth/verify { token }
+API -> DB : findOneAndUpdate(token hash, not expired): verified = true, clear token
+alt token matches
+  API --> C : 200 { message }
+else invalid or expired
+  API --> C : 400 { error }
+end
+
+newpage Log in and search by ingredients (2 of 2)
+
+== Log in ==
+U -> C : enter email, password
+C -> API : POST /api/auth/login { email, password }
+API -> DB : find user by email
+API -> API : bcrypt compare
+alt wrong email or password
+  API --> C : 401 { error: "Invalid credentials" }
+else not verified
+  API --> C : 403 { error: "Please verify your email first" }
+else OK
+  API -> API : sign JWT (HS256, 24 h)
+  API --> C : 200 { token, user }
+  C -> C : store token
+end
+
+== Search recipes by ingredients ==
+U -> C : type "eggs, tomato"
+C -> API : GET /api/recipes/search?q=eggs,tomato  (Authorization: Bearer <token>)
+API -> API : requireAuth: verify JWT, set req.userId
+alt missing or bad token
+  API --> C : 401 { error }
+else valid
+  API -> API : split terms, singularize, escape regex
+  API -> DB : aggregate: match any term, count matches, sort best first
+  DB --> API : page of recipes
+  API --> C : 200 { results, page, totalPages }
+  C --> U : show recipes, best matches first
+end
+@enduml
