@@ -6,14 +6,13 @@ const mongoose = require('mongoose');
 const LIMITS = {
   title: 100,
   minIngredients: 1,
-  maxIngredients: 20,
+  maxIngredients: 10,
   ingredientName: 50,
   ingredientAmount: 50,
   minSteps: 1,
-  maxSteps: 30,
-  step: 1000,
+  maxSteps: 8,
+  step: 500,
   imageUrl: 500,
-
 };
 
 function arrayLength(min, max, label) {
