@@ -6,12 +6,14 @@ const mongoose = require('mongoose');
 const LIMITS = {
   title: 100,
   minIngredients: 1,
-  maxIngredients: 10,
+  maxIngredients: 20,
   ingredientName: 50,
   ingredientAmount: 50,
   minSteps: 1,
-  maxSteps: 8,
-  step: 500,
+  maxSteps: 30,
+  step: 1000,
+  imageUrl: 500,
+
 };
 
 function arrayLength(min, max, label) {
@@ -51,6 +53,14 @@ const recipeSchema = new mongoose.Schema(
     },
     // A user has many recipes
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+
+    imageUrl: {
+      type: String,
+      trim: true,
+      match: /^https?:\/\/.+\.(jpg|jpeg|png)$/i,
+      maxlength: LIMITS.imageUrl,
+      default: null,
+    }
   },
   { timestamps: true },
 );
