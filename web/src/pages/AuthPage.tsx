@@ -64,6 +64,9 @@ export default function AuthPage({ mode }: { mode: Mode }) {
 function LoginForm() {
   const navigate = useNavigate();
   const auth = useAuth();
+  // Set by api/client.ts when a saved login has expired
+  const [params] = useSearchParams();
+  const expired = params.get("expired") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -78,7 +81,7 @@ function LoginForm() {
     try {
       const response = await authApi.login({ email, password });
       auth.login(response.token, response.user);
-      navigate("/home");
+      navigate("/recipes");
     } catch (caught) {
       // 403 means the password was right but the email isn't verified yet
       const notVerified = caught instanceof ApiError && caught.status === 403;
@@ -117,6 +120,7 @@ function LoginForm() {
         <Link className="forgot-link" to="/forgot-password">
           Forgot password?
         </Link>
+        {expired && !error && <StatusMessage>Your session expired. Please log in again.</StatusMessage>}
         {error && <StatusMessage error>{error}</StatusMessage>}
         {unverified && <ResendButton email={email} />}
         <button className="primary-button" disabled={loading}>
