@@ -13,7 +13,7 @@ export interface Recipe {
 }
 
 export interface RecipeListResponse {
-  results: Recipe[];
+  recipes: Recipe[];
   page: number;
   totalPages: number;
 }
