@@ -12,6 +12,7 @@ const LIMITS = {
   minSteps: 1,
   maxSteps: 8,
   step: 500,
+  imageUrl: 500,
 };
 
 function arrayLength(min, max, label) {
@@ -51,6 +52,14 @@ const recipeSchema = new mongoose.Schema(
     },
     // A user has many recipes
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+
+    imageUrl: {
+      type: String,
+      trim: true,
+      match: /^https?:\/\/.+\.(jpg|jpeg|png)$/i,
+      maxlength: LIMITS.imageUrl,
+      default: null,
+    }
   },
   { timestamps: true },
 );
