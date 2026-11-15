@@ -33,6 +33,19 @@ class SessionController extends AsyncNotifier<User?> {
     state = AsyncData(session.user);
   }
 
+  /// PUT /users/me, then keep the new name for the next launch. The header initials and
+  /// the Account screen update from the new state. Throws ApiException (400, 401, ...).
+  Future<void> updateName({
+    required String firstName,
+    required String lastName,
+  }) async {
+    final user = await ref
+        .read(authRepositoryProvider)
+        .updateName(firstName: firstName, lastName: lastName);
+    await ref.read(tokenStorageProvider).saveUser(user);
+    state = AsyncData(user);
+  }
+
   Future<void> logout() async {
     await ref.read(tokenStorageProvider).clear();
     state = const AsyncData(null);

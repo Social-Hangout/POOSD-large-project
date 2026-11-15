@@ -9,6 +9,15 @@ void main() {
     expect(AuthFormValidators.firstName('Ana'), isNull);
   });
 
+  test('names are capped at 50 characters after trimming, like the API', () {
+    expect(AuthFormValidators.firstName('x' * 50), isNull);
+    expect(AuthFormValidators.firstName('  ${'x' * 50}  '), isNull);
+    expect(
+      AuthFormValidators.lastName('x' * 51),
+      'Use 50 characters or fewer.',
+    );
+  });
+
   test('email uses the web regex, on the value as typed', () {
     expect(AuthFormValidators.email('kai@email.com'), isNull);
     expect(
@@ -38,13 +47,54 @@ void main() {
     expect(AuthFormValidators.confirmPassword('a1!aaaaa', 'a1!aaaaa'), isNull);
   });
 
-  test('strength counts length, uppercase, number, symbol; strong from 3', () {
+  test('strength counts length, uppercase, number, symbol', () {
+    expect(passwordStrength(''), 0);
     expect(passwordStrength('basil'), 0);
     expect(passwordStrength('basilbasil'), 1);
     expect(passwordStrength('basilbasil1'), 2);
-    expect(isStrongPassword(passwordStrength('basilbasil1')), isFalse);
     expect(passwordStrength('basilbasil1!'), 3);
-    expect(isStrongPassword(passwordStrength('basilbasil1!')), isTrue);
     expect(passwordStrength('Basilbasil1!'), 4);
+  });
+
+  test('level is Weak until the required rules pass', () {
+    expect(passwordStrengthLevel(''), PasswordStrengthLevel.weak);
+    // 3 of 4 checks but no symbol: the form would reject it, so not Medium.
+    expect(passwordStrengthLevel('Basilbasil1'), PasswordStrengthLevel.weak);
+    expect(passwordStrengthLevel('basilbasil1!'), PasswordStrengthLevel.medium);
+    expect(passwordStrengthLevel('Basilbasil1!'), PasswordStrengthLevel.strong);
+  });
+
+  test('checklist, strength and submit validation always agree', () {
+    for (final p in [
+      '',
+      'a',
+      'password',
+      'password1',
+      'pass1!',
+      'password!',
+      'password1!',
+      'Password1!',
+      '        ',
+      '1234567!',
+    ]) {
+      final requiredMet = passwordRequirements(p)
+          .where((r) => r.required)
+          .every((r) => r.met);
+      expect(AuthFormValidators.password(p) == null, requiredMet, reason: p);
+      expect(
+        passwordStrengthLevel(p) != PasswordStrengthLevel.weak,
+        requiredMet,
+        reason: p,
+      );
+    }
+  });
+
+  test('the length rule matches the API (api/utils/validate.js)', () {
+    expect(
+      passwordRequirements('1234567').first.label,
+      'At least 8 characters',
+    );
+    expect(passwordRequirements('1234567').first.met, isFalse);
+    expect(passwordRequirements('12345678').first.met, isTrue);
   });
 }

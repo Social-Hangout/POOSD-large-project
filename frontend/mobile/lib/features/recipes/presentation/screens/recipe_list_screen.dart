@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/config/app_config.dart';
 import '../../../../core/constants/app_limits.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/network/api_exception.dart';
@@ -27,7 +26,9 @@ import '../widgets/recipe_state_card.dart';
 /// - on page 1 the first recipe is also shown as the featured recipe;
 /// - error: the API's message (or "Could not load recipes.") with "Try again";
 /// - empty: "No recipes yet";
-/// - search is visible but disabled until GET /api/recipes/search exists.
+/// - ingredient search: GET /api/recipes/search?q=<comma-separated ingredients>, sent
+///   250 ms after typing stops; results come back best match first and are shown in that
+///   order (contract route 10), each card saying "Matches X of Y".
 class RecipeListScreen extends ConsumerStatefulWidget {
   const RecipeListScreen({super.key});
 
@@ -57,6 +58,11 @@ class _RecipeListScreenState extends ConsumerState<RecipeListScreen> {
     });
   }
 
+  void _submitSearch(String text) {
+    _debounce?.cancel();
+    ref.read(recipeListQueryProvider.notifier).setSearch(text);
+  }
+
   void _clearSearch() {
     _debounce?.cancel();
     _search.clear();
@@ -76,6 +82,13 @@ class _RecipeListScreenState extends ConsumerState<RecipeListScreen> {
       context.go(AppRoutes.recipe(recipe.id), extra: recipe);
 
   void _retry() => ref.invalidate(recipeListPageProvider);
+
+  Widget _noTermsCard() => RecipeStateCard(
+    heading: 'Type an ingredient to search.',
+    message: 'Separate ingredients with commas, e.g. chicken, rice.',
+    actionLabel: 'Clear search',
+    onAction: _clearSearch,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +137,9 @@ class _RecipeListScreenState extends ConsumerState<RecipeListScreen> {
       },
     );
 
+    // Only commas typed: the API would answer 400, so ask for an ingredient instead.
+    final shown = query.hasNoTerms ? [_noTermsCard()] : results;
+
     return Column(
       children: [
         const AppHeader(),
@@ -145,18 +161,20 @@ class _RecipeListScreenState extends ConsumerState<RecipeListScreen> {
                   controller: _search,
                   onChanged: _onSearchChanged,
                   onClear: _clearSearch,
-                  enabled: AppConfig.recipeSearchAvailable,
-                  hint: AppConfig.recipeSearchAvailable
-                      ? 'Search by ingredient'
-                      : 'Search by ingredient (coming soon)',
+                  onSubmitted: _submitSearch,
+                  hint: 'Ingredients, e.g. chicken, rice',
                 ),
                 const SizedBox(height: AppSpacing.section),
-                const EyebrowHeading(
-                  eyebrow: 'From our community',
-                  heading: 'Explore recipes',
+                EyebrowHeading(
+                  eyebrow: query.isSearching
+                      ? 'Best matches first'
+                      : 'From our community',
+                  heading: query.isSearching
+                      ? 'Recipes for your ingredients'
+                      : 'Explore recipes',
                   gap: 10,
                 ),
-                for (final item in results) ...[
+                for (final item in shown) ...[
                   const SizedBox(height: AppSpacing.section),
                   item,
                 ],

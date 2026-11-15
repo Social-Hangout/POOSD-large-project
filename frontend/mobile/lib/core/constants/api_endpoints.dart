@@ -9,6 +9,9 @@ class ApiEndpoints {
   static const forgotPassword = '/auth/forgot-password';
   static const login = '/auth/login';
 
+  // The logged-in user (contract routes 7 and 8)
+  static const me = '/users/me';
+
   // Recipes (API2)
   static const recipes = '/recipes';
   static const recipeSearch = '/recipes/search';

@@ -42,6 +42,10 @@ class TokenStorage {
     await _storage.write(key: _userKey, value: jsonEncode(user.toJson()));
   }
 
+  /// Replaces the saved user, keeping the token (after the name is changed).
+  Future<void> saveUser(User user) =>
+      _storage.write(key: _userKey, value: jsonEncode(user.toJson()));
+
   Future<void> clear() async {
     _cached = null;
     await _storage.delete(key: _tokenKey);

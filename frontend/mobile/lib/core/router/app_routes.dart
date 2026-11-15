@@ -10,10 +10,17 @@ class AppRoutes {
 
   static const kitchen = '/kitchen';
   static const recipes = '/recipes';
-  static const saved = '/saved';
   static const account = '/account';
 
+  static const accountSettings = '/account/settings';
+  static const accountHelp = '/account/help';
+  static const accountPrivacy = '/account/privacy';
+  static const accountTerms = '/account/terms';
+
   static String recipe(String id) => '/recipes/$id';
+
+  /// A recipe opened from My kitchen stays in that tab, so Back returns to the list.
+  static String kitchenRecipe(String id) => '/kitchen/$id';
   static String checkEmailFor(String email) =>
       Uri(path: checkEmail, queryParameters: {'email': email}).toString();
 

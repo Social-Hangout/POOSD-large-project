@@ -6,7 +6,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'savory_icon.dart';
 
-/// Logged-in layout with the Figma "Bottom navigation" (My kitchen, Explore, Saved, Account).
+/// Logged-in layout with the Figma "Bottom navigation" (My kitchen, Explore, Account). The
+/// Figma Saved tab is left out: the API has no saved/liked recipes.
 /// Each tab keeps its own navigation stack (GoRouter StatefulShellRoute).
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
@@ -16,7 +17,6 @@ class AppShell extends StatelessWidget {
   static const _items = [
     (SavoryIcons.navKitchen, 'My kitchen'),
     (SavoryIcons.navExplore, 'Explore'),
-    (SavoryIcons.navSaved, 'Saved'),
     (SavoryIcons.navAccount, 'Account'),
   ];
 

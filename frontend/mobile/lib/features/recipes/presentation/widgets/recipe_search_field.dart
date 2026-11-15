@@ -7,15 +7,15 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/savory_icon.dart';
 
-/// Figma "Recipe search" bar. Like the web's search box, it is shown but disabled until
-/// GET /api/recipes/search exists (AppConfig.recipeSearchAvailable). The filter icon is
-/// left out: the filter sheet (frame 09) has no API support.
+/// Figma "Recipe search" bar, wired to GET /api/recipes/search (comma-separated
+/// ingredients). The filter icon is left out: the filter sheet (frame 09) has no API support.
 class RecipeSearchField extends StatelessWidget {
   const RecipeSearchField({
     super.key,
     required this.controller,
     required this.onChanged,
     required this.onClear,
+    this.onSubmitted,
     this.enabled = true,
     this.hint = 'Search recipes...',
   });
@@ -26,6 +26,9 @@ class RecipeSearchField extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
+
+  /// The keyboard's search key: search now instead of waiting for the debounce.
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +51,7 @@ class RecipeSearchField extends StatelessWidget {
               controller: controller,
               enabled: enabled,
               onChanged: onChanged,
+              onSubmitted: onSubmitted,
               textInputAction: TextInputAction.search,
               inputFormatters: [
                 LengthLimitingTextInputFormatter(AppLimits.searchMaxChars),

@@ -21,4 +21,12 @@ abstract class AuthRepository {
 
   /// POST /auth/login. 401 = wrong email or password, 403 = email not verified yet.
   Future<AuthSession> login({required String email, required String password});
+
+  /// PUT /users/me. Changes the logged-in user's name and returns the updated user.
+  /// Names are trimmed and 1 to 50 characters; the email can't change. 400 = bad name,
+  /// 401 = session expired.
+  Future<User> updateName({
+    required String firstName,
+    required String lastName,
+  });
 }

@@ -9,7 +9,8 @@ import 'recipe_image.dart';
 
 /// Recipe card. Layout: Figma "Recipe card" (frame 08), photo overlapping the top edge.
 /// Content: the web's RecipeCard (web/src/components/RecipeCard.tsx): title, the first
-/// three ingredients plus "+N more", "By <first name>" and "View Recipe".
+/// three ingredients plus "+N more", "By <first name>" and "View Recipe". Search results
+/// also say "Matches X of Y" (contract route 10: matchedTerms of totalTerms).
 class RecipeCard extends StatelessWidget {
   const RecipeCard({super.key, required this.entry, required this.onOpen});
 
@@ -26,15 +27,28 @@ class RecipeCard extends StatelessWidget {
     return extra > 0 ? '$shown +$extra more' : shown;
   }
 
+  /// "Matches 2 of 3", or null outside search results.
+  static String? matchLabel(RecipeListEntry entry) {
+    final match = entry.match;
+    if (match == null) return null;
+    return 'Matches ${match.matchedTerms} of ${match.totalTerms}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final recipe = entry.recipe;
     final byline = 'By ${recipe.author?.firstName ?? 'Savory cook'}';
     final preview = ingredientPreview(recipe);
+    final matches = matchLabel(entry);
 
     return Semantics(
       button: true,
-      label: '${recipe.title}. $preview. $byline',
+      label: [
+        recipe.title,
+        if (matches != null) matches,
+        preview,
+        byline,
+      ].join('. '),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onOpen,
@@ -58,6 +72,10 @@ class RecipeCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (matches != null) ...[
+                        Text(matches, style: AppTextStyles.eyebrow),
+                        const SizedBox(height: 4),
+                      ],
                       Text(recipe.title, style: AppTextStyles.recipeTitle),
                       const SizedBox(height: 6),
                       Text(preview, style: AppTextStyles.small),

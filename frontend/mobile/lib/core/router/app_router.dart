@@ -1,18 +1,20 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/account/presentation/screens/account_screen.dart';
+import '../../features/account/presentation/screens/info_page_screen.dart';
+import '../../features/account/presentation/screens/settings_screen.dart';
 import '../../features/authentication/presentation/controllers/session_controller.dart';
-import '../../features/authentication/presentation/screens/account_placeholder_screen.dart';
 import '../../features/authentication/presentation/screens/check_email_screen.dart';
 import '../../features/authentication/presentation/screens/forgot_password_screen.dart';
 import '../../features/authentication/presentation/screens/login_screen.dart';
 import '../../features/authentication/presentation/screens/register_screen.dart';
+import '../../features/kitchen/presentation/screens/kitchen_screen.dart';
 import '../../features/recipes/domain/recipe.dart';
 import '../../features/recipes/presentation/screens/recipe_detail_screen.dart';
 import '../../features/recipes/presentation/screens/recipe_list_screen.dart';
 import '../../shared/widgets/app_shell.dart';
-import '../../shared/widgets/placeholder_tab.dart';
 import '../../shared/widgets/splash_screen.dart';
 import 'app_routes.dart';
 
@@ -68,10 +70,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.kitchen,
-                builder: (_, __) => const PlaceholderTab(
-                  eyebrow: 'My kitchen',
-                  heading: "What's in your kitchen?",
-                ),
+                builder: (_, __) => const KitchenScreen(),
+                routes: [GoRoute(path: ':id', builder: _recipeDetail)],
               ),
             ],
           ),
@@ -80,28 +80,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.recipes,
                 builder: (_, __) => const RecipeListScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':id',
-                    builder: (_, state) => RecipeDetailScreen(
-                      recipeId: state.pathParameters['id']!,
-                      initialRecipe: state.extra is Recipe
-                          ? state.extra as Recipe
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.saved,
-                builder: (_, __) => const PlaceholderTab(
-                  eyebrow: 'Saved',
-                  heading: 'Saved recipes',
-                ),
+                routes: [GoRoute(path: ':id', builder: _recipeDetail)],
               ),
             ],
           ),
@@ -109,7 +88,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.account,
-                builder: (_, __) => const AccountPlaceholderScreen(),
+                builder: (_, __) => const AccountScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'settings',
+                    builder: (_, __) => const SettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'help',
+                    builder: (_, __) => InfoPageScreen.help(),
+                  ),
+                  GoRoute(
+                    path: 'privacy',
+                    builder: (_, __) => InfoPageScreen.privacy(),
+                  ),
+                  GoRoute(
+                    path: 'terms',
+                    builder: (_, __) => InfoPageScreen.terms(),
+                  ),
+                ],
               ),
             ],
           ),
@@ -118,3 +115,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// One recipe, from Explore (/recipes/:id) or My kitchen (/kitchen/:id). The list passes
+/// the recipe it already has; a deep link fetches it by id.
+Widget _recipeDetail(BuildContext context, GoRouterState state) =>
+    RecipeDetailScreen(
+      recipeId: state.pathParameters['id']!,
+      initialRecipe: state.extra is Recipe ? state.extra as Recipe : null,
+    );

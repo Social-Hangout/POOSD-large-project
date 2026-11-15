@@ -30,6 +30,19 @@ void main() {
     expect(RecipeCard.ingredientPreview(_recipe(5)), 'i1, i2, i3 +2 more');
   });
 
+  test('search results say how many ingredients matched', () {
+    expect(RecipeCard.matchLabel(RecipeListEntry(_recipe(1))), isNull);
+    expect(
+      RecipeCard.matchLabel(
+        RecipeListEntry(
+          _recipe(1),
+          match: const RecipeMatch(matchedTerms: 2, totalTerms: 3),
+        ),
+      ),
+      'Matches 2 of 3',
+    );
+  });
+
   test('user survives a save and restore (session storage)', () {
     const user = User(
       id: '1',

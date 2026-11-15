@@ -16,6 +16,10 @@ class RecipeListQuery {
   /// so ", ," never reaches the server (which would answer 400).
   bool get isSearching => search.split(',').any((t) => t.trim().isNotEmpty);
 
+  /// Something was typed, but only commas and spaces: not a search the API accepts.
+  /// The screen asks for an ingredient instead of sending it.
+  bool get hasNoTerms => search.trim().isNotEmpty && !isSearching;
+
   RecipeListQuery copyWith({String? search, int? page}) =>
       RecipeListQuery(search: search ?? this.search, page: page ?? this.page);
 }

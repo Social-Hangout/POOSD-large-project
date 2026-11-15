@@ -81,10 +81,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           );
       if (mounted) context.go(AppRoutes.checkEmailFor(email));
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = e.message.isEmpty ? 'Unable to register.' : e.message,
         );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -150,10 +151,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   autofillHints: const [AutofillHints.newPassword],
                   onChanged: _changed,
                 ),
-                if (_password.text.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.fieldGap),
-                  PasswordStrengthMeter(password: _password.text),
-                ],
+                const SizedBox(height: AppSpacing.fieldGap),
+                PasswordStrengthMeter(password: _password.text),
                 const SizedBox(height: AppSpacing.fieldGap),
                 SavoryTextField(
                   label: 'Confirm Password',

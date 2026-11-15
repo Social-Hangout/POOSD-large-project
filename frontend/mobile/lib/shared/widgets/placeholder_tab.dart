@@ -6,8 +6,8 @@ import 'app_header.dart';
 import 'eyebrow_heading.dart';
 import 'surface_card.dart';
 
-/// Stand-in for tabs that have Figma frames but are outside the week-2 scope
-/// (06 My kitchen, 11 Saved, 12 Account). Keeps the bottom navigation usable.
+/// Stand-in for tabs that have Figma frames but no API support yet
+/// (06 My kitchen, 12 Account). Keeps the bottom navigation usable.
 class PlaceholderTab extends StatelessWidget {
   const PlaceholderTab({
     super.key,

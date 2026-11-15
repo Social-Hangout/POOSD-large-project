@@ -49,12 +49,13 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           .forgotPassword(_email.text);
       if (mounted) setState(() => _status = message);
     } on ApiException catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = e.message.isEmpty
               ? 'Unable to send the link.'
               : e.message,
         );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

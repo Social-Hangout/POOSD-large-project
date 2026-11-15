@@ -57,4 +57,16 @@ class ApiAuthRepository implements AuthRepository {
     );
     return AuthSession.fromJson(res.data!);
   });
+
+  @override
+  Future<User> updateName({
+    required String firstName,
+    required String lastName,
+  }) => _call(() async {
+    final res = await _dio.put<Map<String, dynamic>>(
+      ApiEndpoints.me,
+      data: {'firstName': firstName, 'lastName': lastName},
+    );
+    return User.fromJson(res.data!);
+  });
 }
