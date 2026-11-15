@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema(
   {
     firstName: nameField,
     lastName: nameField,
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true, maxlength: 254 },
     passwordHash: { type: String, required: true, select: false },
     verified: { type: Boolean, default: false },
     // verifyToken and resetToken hold the SHA-256 of the emailed token, never the token itself,

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { Recipe } from "../types";
 
@@ -18,21 +19,40 @@ export function imageFor(id: string) {
   return images[hash % images.length];
 }
 
-export default function RecipeCard({ recipe }: { recipe: Recipe }) {
-  const shown = recipe.ingredients.slice(0, 3).map((item) => item.name).join(", ");
-  const more = recipe.ingredients.length > 3 ? ` +${recipe.ingredients.length - 3} more` : "";
+export function authorName(recipe: Recipe) {
+  return recipe.author?.firstName || "a former member";
+}
+
+// badge: optional extra line, such as "Matches 2 of 2" on search results.
+// actions: optional buttons, such as Edit and Delete on My Recipes.
+export default function RecipeCard({
+  recipe,
+  badge,
+  actions,
+  showAllIngredients = false,
+}: {
+  recipe: Recipe;
+  badge?: ReactNode;
+  actions?: ReactNode;
+  showAllIngredients?: boolean;
+}) {
+  const names = recipe.ingredients.map((item) => item.name);
+  const shown = showAllIngredients ? names : names.slice(0, 3);
+  const more = names.length - shown.length;
   return (
     <article className="recipe-card">
       <img className="recipe-image" src={imageFor(recipe.id)} alt="" />
+      {badge && <p className="match-badge">{badge}</p>}
       <h3>{recipe.title}</h3>
       <p>
-        {shown}
-        {more}
+        {shown.join(", ")}
+        {more > 0 && ` +${more} more`}
       </p>
       <footer>
-        <span>By {recipe.author?.firstName || "Savory cook"}</span>
+        <span>By {authorName(recipe)}</span>
         <Link to={`/recipes/${recipe.id}`}>View Recipe</Link>
       </footer>
+      {actions && <div className="card-actions">{actions}</div>}
     </article>
   );
 }

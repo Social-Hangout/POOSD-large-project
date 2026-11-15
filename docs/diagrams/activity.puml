@@ -1,0 +1,79 @@
+@startuml activity
+title Find a recipe by ingredients and review it
+
+' The three sections sit side by side (split) so the diagram is wide enough for a slide.
+' Circles (A) and (B) are UML connectors: the flow continues at the circle with the same letter.
+
+split
+  -[hidden]->
+  partition "1. Log in" {
+    start
+    :Open the app;
+    if (Saved JWT still valid?) then (yes)
+    else (no)
+      :Enter email and password;
+      :POST /api/auth/login;
+      if (Credentials correct?) then (no)
+        :Show "Invalid credentials";
+        stop
+      elseif (Email verified?) then (no)
+        :Show "Please verify your email first"
+        and offer to resend the link;
+        stop
+      else (yes)
+        :API issues a JWT (24 h);
+        :Client saves the token;
+      endif
+    endif
+    (A)
+    detach
+  }
+split again
+  -[hidden]->
+  partition "2. Search by ingredients" {
+    (A)
+    :Type the ingredients on hand
+    (comma separated);
+    :GET /api/recipes/search?q=...;
+    if (Search text valid?) then (no)
+      :Show error;
+      stop
+    else (yes)
+      :Split into terms and singularize;
+      :Find recipes where any term is
+      in the title or an ingredient;
+      :Sort by number of terms matched,
+      then title A to Z;
+    endif
+    if (Any results?) then (no)
+      :Show "No recipes found";
+      stop
+    else (yes)
+      :Show results, best match first;
+    endif
+    (B)
+    detach
+  }
+split again
+  -[hidden]->
+  partition "3. View and review" {
+    (B)
+    :Open a recipe;
+    :Show ingredients, steps,
+    reviews and comments;
+    if (Leave a review?) then (yes)
+      :Pick a rating 1 to 5
+      and optional text;
+      :POST /api/recipes/:id/reviews;
+      if (Already reviewed this recipe?) then (yes)
+        :Show "You already reviewed this recipe";
+      else (no)
+        :Save review;
+        :Add review to the list;
+      endif
+    else (no)
+    endif
+    stop
+  }
+end split
+@enduml
