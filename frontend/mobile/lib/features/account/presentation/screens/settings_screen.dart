@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/form_error_message.dart';
@@ -17,7 +19,8 @@ import '../widgets/account_subpage.dart';
 
 /// Settings (opened from the Account menu): the logged-in user's first name, last name and
 /// email, and a form to change the name (PUT /api/users/me). The email is read-only because
-/// the API doesn't allow changing it. No Figma frame exists for this page, so it uses the
+/// the API doesn't allow changing it. "Change password" opens the Change password page,
+/// as the web Profile page's link does. No Figma frame exists for this page, so it uses the
 /// existing card, field and button components.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -146,6 +149,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           label: 'Edit name',
           variant: SavoryButtonVariant.tint,
           onPressed: () => _startEditing(user),
+        ),
+        const SizedBox(height: 10),
+        SavoryButton(
+          label: 'Change password',
+          variant: SavoryButtonVariant.secondary,
+          onPressed: () => context.go(AppRoutes.accountChangePassword),
         ),
       ],
     );

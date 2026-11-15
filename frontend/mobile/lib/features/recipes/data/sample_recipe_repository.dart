@@ -3,27 +3,40 @@ import 'dart:math' as math;
 import '../../../core/network/api_exception.dart';
 import '../domain/paginated.dart';
 import '../domain/recipe.dart';
+import '../domain/recipe_draft.dart';
 import '../domain/recipe_repository.dart';
 import 'sample_recipes.dart';
 
 /// In-memory stand-in for API2's routes (USE_SAMPLE_RECIPES=true). It follows the
 /// contract's behaviour, including the search rule, so switching to the real routes
 /// should not change what the screens see.
+///
+/// Create, edit and delete change an in-memory copy of the samples for the session, so My
+/// Recipes and the form can be tried offline. [currentAuthor] is the logged-in user (the
+/// API reads it from the token); with none, writes answer 401 like the API.
 class SampleRecipeRepository implements RecipeRepository {
-  SampleRecipeRepository({List<Recipe>? recipes})
-    : _recipes = recipes ?? sampleRecipes;
+  SampleRecipeRepository({
+    List<Recipe>? recipes,
+    Author? Function()? currentAuthor,
+  }) : _recipes = [...(recipes ?? sampleRecipes)],
+       _currentAuthor = currentAuthor ?? (() => null);
 
   final List<Recipe> _recipes;
+  final Author? Function() _currentAuthor;
+  var _nextId = 0;
   static const _delay = Duration(milliseconds: 500);
 
   @override
   Future<Paginated<RecipeListEntry>> listRecipes({
     required int page,
     required int limit,
+    bool mine = false,
   }) async {
     await Future<void>.delayed(_delay);
-    final newestFirst = [..._recipes]
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final me = mine ? _currentAuthor()?.id : null;
+    final newestFirst =
+        _recipes.where((r) => !mine || r.author?.id == me).toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return _paginate(
       newestFirst.map(RecipeListEntry.new).toList(),
       page,
@@ -75,6 +88,96 @@ class SampleRecipeRepository implements RecipeRepository {
       if (recipe.id == id) return recipe;
     }
     throw const ApiException('Recipe not found', statusCode: 404);
+  }
+
+  @override
+  Future<Recipe> createRecipe(RecipeDraft draft) async {
+    await Future<void>.delayed(_delay);
+    final author = _requireAuthor();
+    final clean = _parse(draft);
+    final recipe = Recipe(
+      id: _newId(),
+      title: clean.title,
+      ingredients: clean.ingredients,
+      steps: clean.steps,
+      author: author,
+      createdAt: DateTime.now().toUtc(),
+    );
+    _recipes.add(recipe);
+    return recipe;
+  }
+
+  @override
+  Future<Recipe> updateRecipe(String id, RecipeDraft draft) async {
+    await Future<void>.delayed(_delay);
+    final index = _ownIndex(id);
+    final clean = _parse(draft);
+    final old = _recipes[index];
+    final updated = Recipe(
+      id: old.id,
+      title: clean.title,
+      ingredients: clean.ingredients,
+      steps: clean.steps,
+      author: old.author,
+      createdAt: old.createdAt,
+    );
+    _recipes[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<void> deleteRecipe(String id) async {
+    await Future<void>.delayed(_delay);
+    _recipes.removeAt(_ownIndex(id));
+  }
+
+  Author _requireAuthor() {
+    final author = _currentAuthor();
+    if (author == null) {
+      throw const ApiException('Invalid or missing token', statusCode: 401);
+    }
+    return author;
+  }
+
+  /// The API's 404 then 403 checks for edit and delete.
+  int _ownIndex(String id) {
+    final author = _requireAuthor();
+    final index = _recipes.indexWhere((r) => r.id == id);
+    if (index < 0) {
+      throw const ApiException('Recipe not found', statusCode: 404);
+    }
+    if (_recipes[index].author?.id != author.id) {
+      throw const ApiException('Not your recipe', statusCode: 403);
+    }
+    return index;
+  }
+
+  /// The API's checks and cleaning (parseRecipe): 400 with its message, names lowercased.
+  RecipeDraft _parse(RecipeDraft draft) {
+    final trimmed = draft.trimmed();
+    final problem = trimmed.validate() ??
+        (trimmed.ingredients.any(
+              (i) => i.amount.length > RecipeLimits.ingredientAmount,
+            )
+            ? 'Ingredient amounts can be at most 50 characters'
+            : null);
+    if (problem != null) throw ApiException(problem, statusCode: 400);
+    return RecipeDraft(
+      title: trimmed.title,
+      ingredients: [
+        for (final i in trimmed.ingredients)
+          Ingredient(name: i.name.toLowerCase(), amount: i.amount),
+      ],
+      steps: trimmed.steps,
+    );
+  }
+
+  /// A 24-character hex id, the shape of a MongoDB ObjectId.
+  String _newId() {
+    final seconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    _nextId++;
+    return seconds.toRadixString(16).padLeft(8, '0') +
+        _nextId.toRadixString(16).padLeft(16, '0');
   }
 
   /// Contract "Search rule" steps 1 and 2: split on commas, trim, lowercase, drop empty

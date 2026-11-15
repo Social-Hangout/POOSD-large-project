@@ -47,6 +47,15 @@ class ApiAuthRepository implements AuthRepository {
       _postForMessage(ApiEndpoints.forgotPassword, {'email': email});
 
   @override
+  Future<String> resetPassword({
+    required String token,
+    required String newPassword,
+  }) => _postForMessage(ApiEndpoints.resetPassword, {
+    'token': token,
+    'newPassword': newPassword,
+  });
+
+  @override
   Future<AuthSession> login({
     required String email,
     required String password,

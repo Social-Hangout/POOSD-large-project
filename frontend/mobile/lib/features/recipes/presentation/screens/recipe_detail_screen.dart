@@ -10,8 +10,10 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_header.dart';
 import '../../../../shared/widgets/mealdb_credit.dart';
 import '../../../../shared/widgets/surface_card.dart';
+import '../../../authentication/presentation/controllers/session_controller.dart';
 import '../../domain/recipe.dart';
 import '../controllers/recipe_list_controller.dart';
+import '../widgets/owner_actions.dart';
 import '../widgets/recipe_image.dart';
 import '../widgets/recipe_state_card.dart';
 
@@ -19,6 +21,8 @@ import '../widgets/recipe_state_card.dart';
 /// (web/src/pages/RecipeDetailPage.tsx): "SAVORY RECIPE", title, "By <first name>",
 /// Ingredients (name and amount) and Method (numbered steps); while loading "Preparing your
 /// recipe…"; on failure the API's message (e.g. "Recipe not found") and a way back.
+/// The author also gets Edit and Delete under the byline (the web's OwnerActions);
+/// deleting returns to My Recipes, as on the web.
 /// The id travels in the route (/recipes/:id) as on the web. The list also passes the
 /// recipe it already has, so it shows at once; with no recipe passed (deep link) it is
 /// fetched with GET /api/recipes/:id.
@@ -83,7 +87,7 @@ class _Padded extends StatelessWidget {
   );
 }
 
-class _RecipeContent extends StatelessWidget {
+class _RecipeContent extends ConsumerWidget {
   const _RecipeContent({required this.recipe});
 
   final Recipe recipe;
@@ -91,7 +95,10 @@ class _RecipeContent extends StatelessWidget {
   String get _byline => 'By ${recipe.author?.firstName ?? 'a Savory cook'}';
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(sessionControllerProvider).valueOrNull;
+    final isMine = user != null && recipe.author?.id == user.id;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenX,
@@ -129,6 +136,16 @@ class _RecipeContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(_byline, style: AppTextStyles.body),
+        if (isMine) ...[
+          const SizedBox(height: 4),
+          OwnerActions(
+            key: ValueKey(recipe.id),
+            recipe: recipe,
+            onEdit: () =>
+                context.go(AppRoutes.editRecipe(recipe.id), extra: recipe),
+            onDeleted: () => context.go(AppRoutes.myRecipes),
+          ),
+        ],
         const SizedBox(height: AppSpacing.section),
         _Section(
           title: 'Ingredients',

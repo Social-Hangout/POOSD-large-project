@@ -7,6 +7,7 @@ class ApiEndpoints {
   static const register = '/auth/register';
   static const resendVerification = '/auth/resend-verification';
   static const forgotPassword = '/auth/forgot-password';
+  static const resetPassword = '/auth/reset-password';
   static const login = '/auth/login';
 
   // The logged-in user (contract routes 7 and 8)

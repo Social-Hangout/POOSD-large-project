@@ -61,16 +61,19 @@ widths and scrolling, not fixed screen sizes.
 | Check your email | Same page shows "We sent a verification link to … Open it to activate your account." + Resend button | Own screen (mobile has no room to swap the form in place) with the same text, resend, and Back to Log In | Implemented, not run |
 | Email verification link | `/verify` page calls `POST /auth/verify` | Not in the app: the emailed link opens the web page in the phone's browser | By design |
 | Forgot password | `/forgot-password`: `POST /auth/forgot-password`, API message | Same, Figma 04 layout | Implemented, not run |
-| Reset password | `/reset-password?token=` from the email | Not in the app: the link opens the web page | By design |
+| Reset password | `/reset-password?token=` from the email: New Password + Confirm Password, "Use at least 8 characters, a number and a symbol.", "Passwords don't match.", "Your passwords match.", `POST /auth/reset-password { token, newPassword }`, the API's message | Logged in: the second step of Change password (below). Logged out: the link opens the web page, as before | Implemented (logged in) |
 | Resend verification page | `/resend-verification` (linked from a failed `/verify`) | Covered by the resend button on login (403) and check-your-email | By design |
 | Session | token + user in localStorage, restored without a request; token not sent to `/auth/*`; 401 on a request that sent it → logout to login | Same, in the iOS Keychain / Android Keystore (`flutter_secure_storage`) | Implemented, not run |
 | After login | `/home`, a placeholder "Logged in as …" page | Straight to the recipe list | Intentional difference |
 | Account | None | Figma 12 menu: initials, full name and email, then Settings, Need help?, Privacy policy, Terms of use, Log out, and the legal footer. Settings shows first name, last name and email (read-only, the API can't change it) and "Edit name" (`PUT /api/users/me`, each name trimmed, 1 to 50 characters), which also updates the header initials. Need help? explains search, verifying, password reset and renaming. Privacy policy and Terms of use say they aren't published yet: no text exists for them | Rename tested against the live route; screens not run |
+| Change password | Profile page link "Change password" → `/forgot-password` (email a link) → `/reset-password` from the email. The API has no other password route | Account menu → Change password (also a button on Settings): step 1 "Send Reset Link" to the logged-in email (`POST /auth/forgot-password`, "Sending…", API message); step 2 pastes the emailed link (or the whole email, or the token; "Paste from clipboard") and runs the web ResetForm's checks, order and messages with the registration checklist, then `POST /auth/reset-password`. Success shows the API's message; the device stays logged in (the API doesn't revoke tokens). Need help? explains it | Rules unit-tested; flow run end to end against the real `api/` route code (fake database and mailer); screen not run |
 | Recipe listing | `GET /api/recipes?page&limit=12`; featured = first recipe on page 1; card: photo, title, first 3 ingredients "+N more", "By <name>"; loading, error + "Try again", "No recipes yet"; prev / pages / next | Same requests and content, Figma 08/13/14 layout, numbered pages windowed for phone width | Implemented, not run against the API |
 | Recipe search | Disabled box, "Search by ingredient (coming soon)" | `GET /api/recipes/search?q=a,b`: search box on Explore (250 ms debounce, or the keyboard's search key), results in server order, "Matches X of Y" on each card; commas only asks for an ingredient instead of sending a 400 | Parsing tested against the live route; screen not run. Web still disabled |
-| Saved recipes | None | Removed (Figma Saved tab): the API has no saved/liked recipes | By design |
+| Saved recipes | None | Removed (Figma Saved tab): the API has no saved/liked recipes. Its tab slot is now My recipes | By design |
 | My kitchen | None | Figma 06: ingredients pop up as removable chips (Enter, "+", or a comma), and "Recipes you can make" lists `GET /api/recipes/search?q=<ingredients>` results best match first with "Matches X of Y", paging, loading, empty and error states. Up to 10 ingredients of 50 characters, query at most 200 characters (the API's limits). The list lasts for the session (the API has no pantry storage). Left out, no API support: recipe count, time and servings, Fine-tune, heart, mic | Query and parsing tested against the live route; screen not run |
-| Recipe details | `/recipes/:id`, `GET /api/recipes/:id`; "SAVORY RECIPE", title, "By <name>", Ingredients, Method; "Preparing your recipe…"; error message shown | Same content and messages; shows the recipe passed from the list at once, fetches by id otherwise | Implemented, not run |
+| Recipe details | `/recipes/:id`, `GET /api/recipes/:id`; "SAVORY RECIPE", title, "By <name>", Ingredients, Method; "Preparing your recipe…"; error message shown; the author gets Edit / Delete (`OwnerActions`), and deleting goes to My Recipes | Same content and messages; shows the recipe passed from the list at once, fetches by id otherwise; same Edit / Delete for the author (Edit opens the form in the My recipes tab) | Implemented, not run |
+| My Recipes | `/my-recipes` (`MyRecipesPage`): "YOUR KITCHEN" / "My Recipes" + "+ New Recipe"; `GET /api/recipes?page&limit=12&mine=true`; regular cards plus Edit and a two-step Delete ("Delete “…”? Its reviews and comments go too.", "Yes, delete" / "Deleting…", Cancel; `DELETE /api/recipes/:id`; error shown on the card); "You haven’t shared any recipes yet." + "Share your first recipe"; an emptied page steps back one; prev / pages / next | New **My recipes** tab (in the old Saved slot) with the same requests, words and states. Loading uses the skeleton cards; errors add "Try again" as on Explore; pull to refresh | Sample-repository logic tested; screen not run |
+| New / edit recipe | `/recipes/new`, `/recipes/:id/edit` (`RecipeFormPage`): "NEW RECIPE" / "Share a recipe" or "EDIT RECIPE" / "Edit your recipe"; Title, Ingredients (name + optional amount, "n of 10", singular-name hint), Steps ("n of 8"); add / remove rows (last row stays; "10 ingredients max" / "8 steps max"); input length limits; same checks and messages as the API, cleared on edit; trimmed `POST` / `PUT /api/recipes`; "Publish Recipe" / "Save Changes" / "Saving…"; 404 → "This recipe no longer exists."; others → API message; non-author → "You can only edit your own recipes."; opens the saved recipe | `/my-recipes/new` and `/my-recipes/:id/edit` with the same fields, limits, rules, messages and flow (validation unit-tested against the web's rules). After saving, My Recipes, Explore, My kitchen and the recipe reload | Validation tested; screen not run |
 | Photos | `imageFor(id)` picks 1 of 6 photos | Same function and photos (unit-tested against the web's JS) | Tested (logic) |
 | TheMealDB credit | "Recipe data from TheMealDB", every page | Same text and link: legal footer (auth screens), list, recipe | Implemented |
 
@@ -89,7 +92,7 @@ widths and scrolling, not fixed screen sizes.
 
 | File | What | Used by | Source |
 | --- | --- | --- | --- |
-| `assets/icons/*.svg` (8) | eye, eye-off, alert, search, green search, 3 tab icons | text field, search, empty state, tab bar | Figma Mobile Screens (eye and alert rebuilt from Figma's vector paths: the SVG export drops the pupil and "!") |
+| `assets/icons/*.svg` (10) | eye, eye-off, alert, search, green search, 4 tab icons (+ the unused Figma Saved icon) | text field, search, empty state, tab bar | Figma Mobile Screens (eye and alert rebuilt from Figma's vector paths: the SVG export drops the pupil and "!"). `nav_my_recipes.svg` is drawn to match the other tab icons (20 × 20, 1.5 px #74756F stroke); Figma has no My recipes icon |
 | `assets/images/recipes/recipe_photo_1…6.png` | food photos | recipe cards, featured card, recipe screen | `web/public/assets/` 3ecaf, 412f6, 1df21, da300, 31edd, 3751d (same order as the web) |
 | `assets/images/grain_bowl.png` | bowl on the login banner | login | `web/public/assets/24a21.png`, 384 px. **Chosen by eye; not compared with the Figma "Grain bowl" layer.** |
 
@@ -124,13 +127,15 @@ flutter run -d "iPhone 16e"      # then a Pixel 7 emulator
 lib/core/       config, constants, network (Dio client = web/src/api/client.ts), router, storage, theme
 lib/features/   account/, authentication/, kitchen/, recipes/   (data, domain, presentation)
 lib/shared/     widgets: header, buttons, text field, cards, footer, TheMealDB credit, tab shell
+                (tabs: My kitchen, Explore, My recipes, Account)
 assets/         icons/ (Figma SVG), images/ (photos)      test/   unit tests
 android/ ios/   native projects
 ```
 
 ## Open items
 
-- No Figma frames for "check your email" or the recipe screen; both reuse existing pieces.
+- No Figma frames for "check your email", the recipe screen, My Recipes or the recipe form;
+  all reuse existing pieces (header, recipe card, state card, buttons, text field, cards).
 - The Saved tab was removed (no API support).
 - Privacy policy and Terms of use have no text yet; replace the stand-ins in
   `lib/features/account/presentation/screens/info_page_screen.dart` when the team writes them.

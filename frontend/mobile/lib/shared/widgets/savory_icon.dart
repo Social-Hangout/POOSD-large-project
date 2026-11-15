@@ -10,6 +10,7 @@ enum SavoryIcons {
   searchGreen('search_green'),
   navKitchen('nav_kitchen'),
   navExplore('nav_explore'),
+  navMyRecipes('nav_my_recipes'),
   navAccount('nav_account');
 
   const SavoryIcons(this.file);

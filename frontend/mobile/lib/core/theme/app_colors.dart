@@ -14,6 +14,11 @@ class AppColors {
   static const greenDark = Color(0xFF147E4D);
   static const greenTint = Color(0xFFE8F7EF);
   static const error = Color(0xFFC33F36);
+
+  /// Delete actions, from the web's .danger-button / .danger-text (#c0392b) and the
+  /// remove-row hover tint (#fdecea).
+  static const danger = Color(0xFFC0392B);
+  static const dangerTint = Color(0xFFFDECEA);
   static const beige = Color(0xFFEDE4D6);
   static const avatar = Color(0xFF272421);
   static const iconButton = Color(0xFFFAF9F6);

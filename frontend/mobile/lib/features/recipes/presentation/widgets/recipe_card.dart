@@ -11,11 +11,19 @@ import 'recipe_image.dart';
 /// Content: the web's RecipeCard (web/src/components/RecipeCard.tsx): title, the first
 /// three ingredients plus "+N more", "By <first name>" and "View Recipe". Search results
 /// also say "Matches X of Y" (contract route 10: matchedTerms of totalTerms).
+/// [actions], like the web card's `actions` prop, adds a row under a divider (Edit and
+/// Delete on My Recipes); taps there don't open the recipe.
 class RecipeCard extends StatelessWidget {
-  const RecipeCard({super.key, required this.entry, required this.onOpen});
+  const RecipeCard({
+    super.key,
+    required this.entry,
+    required this.onOpen,
+    this.actions,
+  });
 
   final RecipeListEntry entry;
   final VoidCallback onOpen;
+  final Widget? actions;
 
   static const _imageSize = 128.0;
   static const _overlap = 32.0;
@@ -43,6 +51,8 @@ class RecipeCard extends StatelessWidget {
 
     return Semantics(
       button: true,
+      // Keeps the action buttons as their own nodes for screen readers.
+      explicitChildNodes: actions != null,
       label: [
         recipe.title,
         if (matches != null) matches,
@@ -68,38 +78,59 @@ class RecipeCard extends StatelessWidget {
                   ),
                   boxShadow: AppColors.cardShadow,
                 ),
-                child: ExcludeSemantics(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (matches != null) ...[
-                        Text(matches, style: AppTextStyles.eyebrow),
-                        const SizedBox(height: 4),
-                      ],
-                      Text(recipe.title, style: AppTextStyles.recipeTitle),
-                      const SizedBox(height: 6),
-                      Text(preview, style: AppTextStyles.small),
-                      const SizedBox(height: 10),
-                      Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ExcludeSemantics(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(
-                            child: Text(
-                              byline,
-                              style: AppTextStyles.recipeMeta,
-                            ),
-                          ),
-                          SavoryButton(
-                            label: 'View Recipe',
-                            variant: SavoryButtonVariant.tint,
-                            expand: false,
-                            height: AppSpacing.tapTarget,
-                            compactText: true,
-                            onPressed: onOpen,
+                          if (matches != null) ...[
+                            Text(matches, style: AppTextStyles.eyebrow),
+                            const SizedBox(height: 4),
+                          ],
+                          Text(recipe.title, style: AppTextStyles.recipeTitle),
+                          const SizedBox(height: 6),
+                          Text(preview, style: AppTextStyles.small),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  byline,
+                                  style: AppTextStyles.recipeMeta,
+                                ),
+                              ),
+                              SavoryButton(
+                                label: 'View Recipe',
+                                variant: SavoryButtonVariant.tint,
+                                expand: false,
+                                height: AppSpacing.tapTarget,
+                                compactText: true,
+                                onPressed: onOpen,
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                    if (actions != null)
+                      // Opaque, so a tap between the buttons doesn't open the recipe.
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {},
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.only(top: 4),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: AppColors.border),
+                            ),
+                          ),
+                          child: actions,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               Positioned(

@@ -6,8 +6,10 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'savory_icon.dart';
 
-/// Logged-in layout with the Figma "Bottom navigation" (My kitchen, Explore, Account). The
-/// Figma Saved tab is left out: the API has no saved/liked recipes.
+/// Logged-in layout with the Figma "Bottom navigation" (My kitchen, Explore, My recipes,
+/// Account). The Figma Saved tab is left out: the API has no saved/liked recipes. Its slot
+/// holds My recipes, the web nav's "My Recipes" link (the user's own recipes, with
+/// "+ New Recipe" on that screen). Order must match the branches in app_router.dart.
 /// Each tab keeps its own navigation stack (GoRouter StatefulShellRoute).
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
@@ -17,6 +19,7 @@ class AppShell extends StatelessWidget {
   static const _items = [
     (SavoryIcons.navKitchen, 'My kitchen'),
     (SavoryIcons.navExplore, 'Explore'),
+    (SavoryIcons.navMyRecipes, 'My recipes'),
     (SavoryIcons.navAccount, 'Account'),
   ];
 

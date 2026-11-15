@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
@@ -21,6 +22,7 @@ class SavoryTextField extends StatefulWidget {
     this.onChanged,
     this.onSubmitted,
     this.textCapitalization = TextCapitalization.none,
+    this.maxLength,
   });
 
   final String label;
@@ -34,6 +36,9 @@ class SavoryTextField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final TextCapitalization textCapitalization;
+
+  /// Stops typing at this many characters, like the web input's `maxLength`. No counter.
+  final int? maxLength;
 
   @override
   State<SavoryTextField> createState() => _SavoryTextFieldState();
@@ -90,6 +95,9 @@ class _SavoryTextFieldState extends State<SavoryTextField> {
                   textCapitalization: widget.textCapitalization,
                   onChanged: widget.onChanged,
                   onSubmitted: widget.onSubmitted,
+                  inputFormatters: widget.maxLength == null
+                      ? null
+                      : [LengthLimitingTextInputFormatter(widget.maxLength)],
                   style: AppTextStyles.input,
                   decoration: InputDecoration(
                     isCollapsed: true,

@@ -10,6 +10,10 @@ import '../domain/user.dart';
 ///   API's 401 "Invalid credentials", and blank fields get its 400
 /// - registering an email starting with "taken" gets the 409 reply
 /// - changing the name follows PUT /api/users/me: trimmed, 1 to 50 characters, else 400
+/// - resetting the password follows POST /api/auth/reset-password: the token must look
+///   like the API's (64 lowercase hex characters) and the password be 8+ characters, else
+///   400. No email is sent offline, so any well-formed token is accepted; the new password
+///   then works for the sample login until the app restarts.
 ///
 /// Nothing here hashes or stores a password: that is the API's job (bcrypt, server side).
 class SampleAuthRepository implements AuthRepository {
@@ -18,7 +22,9 @@ class SampleAuthRepository implements AuthRepository {
       _loginPassword = loginPassword ?? AppConfig.sampleLoginPassword;
 
   final String _loginEmail;
-  final String _loginPassword;
+  String _loginPassword;
+
+  static final _tokenPattern = RegExp(r'^[a-f0-9]{64}$');
 
   static const _delay = Duration(milliseconds: 600);
 
@@ -45,6 +51,26 @@ class SampleAuthRepository implements AuthRepository {
   Future<String> forgotPassword(String email) async {
     await Future<void>.delayed(_delay);
     return 'If that email has an account, a reset link was sent';
+  }
+
+  @override
+  Future<String> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    await Future<void>.delayed(_delay);
+    // Same checks and order as POST /api/auth/reset-password.
+    if (!_tokenPattern.hasMatch(token)) {
+      throw const ApiException('Invalid or expired link', statusCode: 400);
+    }
+    if (newPassword.length < 8) {
+      throw const ApiException(
+        'Password must be at least 8 characters',
+        statusCode: 400,
+      );
+    }
+    _loginPassword = newPassword;
+    return 'Password updated. You can log in now.';
   }
 
   @override

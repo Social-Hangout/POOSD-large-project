@@ -16,8 +16,18 @@ abstract class AuthRepository {
   Future<String> resendVerification(String email);
 
   /// POST /auth/forgot-password. Returns the API's message. The emailed link opens the
-  /// web app's /reset-password page, where the new password is chosen.
+  /// web app's /reset-password page; the app's Change password screen accepts the same
+  /// link (see [resetPassword]).
   Future<String> forgotPassword(String email);
+
+  /// POST /auth/reset-password with the token from the emailed link and the new password
+  /// (the API reads it from `newPassword`, as web/src/api/auth.ts sends it). Returns the
+  /// API's message. 400 "Invalid or expired link" (bad, used or hour-old token) or
+  /// "Password must be at least 8 characters".
+  Future<String> resetPassword({
+    required String token,
+    required String newPassword,
+  });
 
   /// POST /auth/login. 401 = wrong email or password, 403 = email not verified yet.
   Future<AuthSession> login({required String email, required String password});

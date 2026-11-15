@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/account/presentation/screens/account_screen.dart';
+import '../../features/account/presentation/screens/change_password_screen.dart';
 import '../../features/account/presentation/screens/info_page_screen.dart';
 import '../../features/account/presentation/screens/settings_screen.dart';
 import '../../features/authentication/presentation/controllers/session_controller.dart';
@@ -12,7 +13,9 @@ import '../../features/authentication/presentation/screens/login_screen.dart';
 import '../../features/authentication/presentation/screens/register_screen.dart';
 import '../../features/kitchen/presentation/screens/kitchen_screen.dart';
 import '../../features/recipes/domain/recipe.dart';
+import '../../features/recipes/presentation/screens/my_recipes_screen.dart';
 import '../../features/recipes/presentation/screens/recipe_detail_screen.dart';
+import '../../features/recipes/presentation/screens/recipe_form_screen.dart';
 import '../../features/recipes/presentation/screens/recipe_list_screen.dart';
 import '../../shared/widgets/app_shell.dart';
 import '../../shared/widgets/splash_screen.dart';
@@ -84,6 +87,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          // My recipes: the web's /my-recipes, /recipes/new and /recipes/:id/edit.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.myRecipes,
+                builder: (_, __) => const MyRecipesScreen(),
+                routes: [
+                  // Before ':id', so "new" is never read as a recipe id.
+                  GoRoute(
+                    path: 'new',
+                    builder: (_, __) => const RecipeFormScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: _recipeDetail,
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (_, state) => RecipeFormScreen(
+                          recipeId: state.pathParameters['id'],
+                          initialRecipe: state.extra is Recipe
+                              ? state.extra as Recipe
+                              : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -93,6 +127,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'settings',
                     builder: (_, __) => const SettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'change-password',
+                    builder: (_, __) => const ChangePasswordScreen(),
                   ),
                   GoRoute(
                     path: 'help',
@@ -116,7 +154,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// One recipe, from Explore (/recipes/:id) or My kitchen (/kitchen/:id). The list passes
+/// One recipe, from Explore (/recipes/:id), My kitchen (/kitchen/:id) or My recipes
+/// (/my-recipes/:id). The list passes
 /// the recipe it already has; a deep link fetches it by id.
 Widget _recipeDetail(BuildContext context, GoRouterState state) =>
     RecipeDetailScreen(

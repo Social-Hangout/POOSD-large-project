@@ -16,7 +16,14 @@ enum SavoryButtonVariant {
   tint(AppColors.greenTint, AppColors.greenDark),
 
   /// White fill with a border ("Reset filters").
-  secondary(AppColors.surface, AppColors.ink, border: AppColors.border);
+  secondary(AppColors.surface, AppColors.ink, border: AppColors.border),
+
+  /// White fill, green border, dark green label: the web's .secondary-button
+  /// ("+ Add ingredient", "+ Add step").
+  outlineGreen(AppColors.surface, AppColors.greenDark, border: AppColors.green),
+
+  /// Red fill, white label: the web's .danger-button ("Yes, delete").
+  danger(AppColors.danger, AppColors.surface);
 
   const SavoryButtonVariant(this.background, this.foreground, {this.border});
   final Color background;
@@ -35,6 +42,7 @@ class SavoryButton extends StatelessWidget {
     this.expand = true,
     this.height = AppSpacing.buttonHeight,
     this.compactText = false,
+    this.fadeWhenDisabled = false,
   });
 
   final String label;
@@ -50,6 +58,9 @@ class SavoryButton extends StatelessWidget {
   /// 13 px bold label, used by the 44 px card button.
   final bool compactText;
 
+  /// Draw the button at 55 % opacity while [onPressed] is null.
+  final bool fadeWhenDisabled;
+
   @override
   Widget build(BuildContext context) {
     final textStyle =
@@ -57,7 +68,7 @@ class SavoryButton extends StatelessWidget {
             .copyWith(color: variant.foreground);
     final enabled = onPressed != null && !isLoading;
 
-    return Semantics(
+    final button = Semantics(
       button: true,
       enabled: enabled,
       label: label,
@@ -100,5 +111,11 @@ class SavoryButton extends StatelessWidget {
         ),
       ),
     );
+
+    // Disabled (not loading) buttons fade like the web's `button:disabled` (opacity .55).
+    // Off by default so existing screens look the same.
+    return fadeWhenDisabled && onPressed == null && !isLoading
+        ? Opacity(opacity: 0.55, child: button)
+        : button;
   }
 }

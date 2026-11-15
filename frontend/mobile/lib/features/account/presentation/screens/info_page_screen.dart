@@ -46,6 +46,13 @@ class InfoPageScreen extends StatelessWidget {
             'browser and works for one hour.',
       ),
       (
+        heading: 'Changing your password',
+        body:
+            'Go to Account, then Change password, and tap Send Reset Link. Open '
+            'the email, copy the link and paste it on the same page, then choose '
+            'your new password. The link works once, for one hour.',
+      ),
+      (
         heading: 'Changing your name',
         body:
             'Go to Account, then Settings, and tap Edit name. Your email '

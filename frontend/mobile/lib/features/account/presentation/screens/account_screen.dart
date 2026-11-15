@@ -13,7 +13,8 @@ import '../../../../shared/widgets/surface_card.dart';
 import '../../../authentication/presentation/controllers/session_controller.dart';
 
 /// Account tab. Layout: Figma 12 "Account menu": the person's initials and name, then
-/// Settings, Need help?, Privacy policy, Terms of use and Log out, then the legal footer.
+/// Settings, Change password, Need help?, Privacy policy, Terms of use and Log out, then
+/// the legal footer. Change password is the web Profile page's "Change password" link.
 /// Figma shows "Savory" as a stand-in where the name goes; this shows the real name, with
 /// the email under it. Icons are Material outline icons close to the Figma ones.
 class AccountScreen extends ConsumerWidget {
@@ -72,6 +73,12 @@ class AccountScreen extends ConsumerWidget {
                       icon: Icons.settings_outlined,
                       label: 'Settings',
                       onTap: () => context.go(AppRoutes.accountSettings),
+                    ),
+                    _MenuRow(
+                      icon: Icons.lock_outline,
+                      label: 'Change password',
+                      onTap: () =>
+                          context.go(AppRoutes.accountChangePassword),
                     ),
                     _MenuRow(
                       icon: Icons.help_outline,
